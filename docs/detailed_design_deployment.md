@@ -454,18 +454,18 @@ graph TD
 
 ### 6.1 マイグレーション戦略
 
-SQLAlchemy ベースのマイグレーション戦略を以下に示します：
+Django ORM ベースのマイグレーション戦略を以下に示します：
 
-1. **Alembic の導入**
+1. **Django Migration の活用**
 
-   - SQLAlchemy モデルの変更を追跡
-   - バージョン管理されたマイグレーションスクリプト生成
+   - Django モデルの変更を追跡
+   - バージョン管理されたマイグレーションファイル生成
 
 2. **マイグレーション手順**
 
-   - 開発環境でのスキーマ変更
-   - Alembic によるマイグレーションスクリプト自動生成
-   - マイグレーションスクリプトの手動レビュー
+   - 開発環境でのモデル変更
+   - `python manage.py makemigrations` によるマイグレーションファイル自動生成
+   - マイグレーションファイルの手動レビュー
    - リポジトリへのコミット
 
 3. **デプロイメント時のマイグレーション実行**
@@ -476,61 +476,26 @@ SQLAlchemy ベースのマイグレーション戦略を以下に示します：
 ### 6.2 マイグレーション設定
 
 ```python
-# alembic/env.py
-from logging.config import fileConfig
+# settings.py 内のデータベース設定
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'price_alert'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
-
-# Alembic設定の取得
-config = context.config
-
-# logging設定の読み込み
-fileConfig(config.config_file_name)
-
-# メタデータ定義の取得
-from price_alert.models import Base
-target_metadata = Base.metadata
-
-def run_migrations_offline():
-    """
-    直接SQLを実行するモードでマイグレーション実行
-    """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-def run_migrations_online():
-    """
-    Engine接続を使用してマイグレーション実行
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+# マイグレーション設定
+MIGRATION_MODULES = {
+    'users': 'users.migrations',
+    'products': 'products.migrations',
+    'price_tracking': 'price_tracking.migrations',
+    'alerts': 'alerts.migrations',
+    'ec_sites': 'ec_sites.migrations',
+}
 ```
 
 ### 6.3 マイグレーション実行スクリプト
@@ -541,19 +506,23 @@ else:
 
 set -e
 
-# 環境変数確認
-if [ -z "$DATABASE_URL" ]; then
-    echo "ERROR: DATABASE_URL environment variable is not set"
+# 環境確認
+if [ -z "$DJANGO_SETTINGS_MODULE" ]; then
+    echo "ERROR: DJANGO_SETTINGS_MODULE environment variable is not set"
     exit 1
 fi
 
 # バックアップ作成
 echo "Creating database backup..."
-pg_dump "$DATABASE_URL" > backup_$(date +%Y%m%d_%H%M%S).sql
+python manage.py dbbackup
 
 # マイグレーション実行
 echo "Running database migrations..."
-alembic upgrade head
+python manage.py migrate
+
+# マイグレーション結果の確認
+echo "Checking migration status..."
+python manage.py showmigrations --list
 
 echo "Migration completed successfully!"
 ```

@@ -212,17 +212,12 @@ class EncryptionService:
             encrypted_data = encrypted_data.encode()
         return self.cipher.decrypt(encrypted_data).decode()
 
-# SQLAlchemyモデルでの使用例
-class APIToken(Base):
-    __tablename__ = 'api_tokens'
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    token_encrypted = Column(String(500), nullable=False)
-    expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User", back_populates="api_tokens")
+# Djangoモデルでの使用例
+class APIToken(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='api_tokens')
+    token_encrypted = models.CharField(max_length=500)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     # プロパティを使用して自動的に暗号化/復号
     @property

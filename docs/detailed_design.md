@@ -110,7 +110,7 @@ graph TD
 - **API**: Django REST Framework
 - **タスクキュー**: Celery
 - **メッセージブローカー**: Redis
-- **ORM**: SQLAlchemy
+- **ORM**: Django ORM
 - **スクレイピング**: BeautifulSoup, Selenium（必要に応じて）
 - **データ分析**: Pandas, NumPy
 
@@ -440,11 +440,11 @@ sequenceDiagram
 
 ## 7. バックエンド詳細設計
 
-本システムのバックエンドは、Django REST Framework をベースとし、SQLAlchemy を使用したデータアクセス層を実装します。
+本システムのバックエンドは、Django REST Framework をベースとし、Django ORM を使用したデータアクセス層を実装します。
 
 主な特徴は以下の通りです：
 
-- **SQLAlchemy によるデータアクセス**: Django ORM の代わりに SQLAlchemy を採用
+- **Django ORM によるデータアクセス**: 標準的な Django ORM を採用
 - **ビジネスロジックの分離**: クリーンアーキテクチャの考え方に基づいた責務の分離
 - **非同期タスク処理**: Celery を使用した価格収集と通知処理の効率化
 
