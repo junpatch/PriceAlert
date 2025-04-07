@@ -13,7 +13,7 @@ import {
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api/',
+    baseUrl: `${import.meta.env.VITE_DJANGO_API_URL}/api/v1`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
       if (token) {
@@ -32,7 +32,7 @@ export const api = createApi({
         body: credentials,
       }),
     }),
-    register: builder.mutation<{ token: string; user: User }, { email: string; password: string; username: string }>({
+    register: builder.mutation<{ token: string; user: User }, { email: string; password: string; username: string; confirmPassword: string }>({
       query: (userData) => ({
         url: 'auth/register/',
         method: 'POST',

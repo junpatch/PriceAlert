@@ -62,7 +62,7 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setSuccessMessage(null);
     try {
-      await registerUser(data.username, data.email, data.password);
+      await registerUser(data.username, data.email, data.password, data.confirmPassword);
       setSuccessMessage('アカウント登録に成功しました。リダイレクトします...');
     } catch (err) {
       // エラーはuseAuthフックで処理されるので、ここでは何もしない

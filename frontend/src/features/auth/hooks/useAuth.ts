@@ -37,9 +37,9 @@ export const useAuth = () => {
     }
   };
 
-  const handleRegister = async (username: string, email: string, password: string) => {
+  const handleRegister = async (username: string, email: string, password: string, confirmPassword: string) => {
     try {
-      const result = await register({ username, email, password }).unwrap();
+      const result = await register({ username, email, password, confirmPassword }).unwrap();
       dispatch(loginSuccess(result));
       navigate('/dashboard');
     } catch (err) {
