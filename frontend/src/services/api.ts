@@ -7,7 +7,7 @@ import {
   PriceHistory,
   Notification,
   UserSettings
-} from '@types/index';
+} from '../types';
 
 // API定義
 export const api = createApi({
@@ -15,29 +15,61 @@ export const api = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${import.meta.env.VITE_DJANGO_API_URL}/api/v1`,
     prepareHeaders: (headers, { getState }) => {
+      // まずReduxストアからトークンを取得
       const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+      
+      // Reduxストアにトークンがなければ、localStorageから直接取得を試みる
+      const finalToken = token || localStorage.getItem('token');
+      
+      if (finalToken) {
+        // 認証ヘッダーを設定（Django REST framework用の形式）
+        headers.set('Authorization', `Bearer ${finalToken}`);
+        
+        // 開発環境でのみログを出力
+        if (import.meta.env.DEV) {
+          console.debug('認証ヘッダーを設定しました');
+        }
+      } else {
+        if (import.meta.env.DEV) {
+          console.warn('認証トークンが見つかりません');
+        }
       }
+      
       return headers;
     },
   }),
   tagTypes: ['Products', 'Product', 'Notifications', 'Settings'],
   endpoints: (builder) => ({
     // 認証関連
-    login: builder.mutation<{ token: string; user: User }, { email: string; password: string }>({
+    login: builder.mutation<{ access_token: string; refresh_token: string; user: User }, { email: string; password: string }>({
       query: (credentials) => ({
         url: 'auth/login/',
         method: 'POST',
         body: credentials,
       }),
     }),
-    register: builder.mutation<{ token: string; user: User }, { email: string; password: string; username: string; confirmPassword: string }>({
+    register: builder.mutation<{ access_token: string; refresh_token: string; user: User }, { email: string; password: string; username: string; confirmPassword: string }>({
       query: (userData) => ({
         url: 'auth/register/',
         method: 'POST',
         body: userData,
       }),
+    }),
+    logout: builder.mutation<void, void>({
+      query: () => {
+        // 明示的に認証ヘッダーを追加（トレース用）
+        const token = localStorage.getItem('token');
+        
+        return {
+          url: 'auth/logout/',
+          method: 'POST',
+          // 明示的にヘッダーを設定
+          headers: token ? {
+            'Authorization': `Bearer ${token}`
+          } : undefined
+        };
+      },
+      invalidatesTags: ['Products', 'Notifications', 'Settings'],
     }),
     getCurrentUser: builder.query<User, void>({
       query: () => 'auth/me/',
@@ -125,6 +157,7 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useLogoutMutation,
   useGetCurrentUserQuery,
   useGetUserProductsQuery,
   useGetProductByIdQuery,
