@@ -75,6 +75,25 @@ export const api = createApi({
       query: () => 'auth/me/',
     }),
     
+    // パスワードリセット関連
+    requestPasswordReset: builder.mutation<{ detail: string }, { email: string }>({
+      query: (data) => ({
+        url: 'auth/password-reset/request/',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    resetPassword: builder.mutation<{ detail: string }, { token: string; password: string; confirmPassword: string }>({
+      query: (data) => {
+        const { token, ...passwordData } = data;
+        return {
+          url: `auth/password-reset/confirm/${token}/`,
+          method: 'POST',
+          body: passwordData,
+        };
+      },
+    }),
+    
     // 商品関連
     getUserProducts: builder.query<UserProduct[], void>({
       query: () => 'user-products/',
@@ -159,6 +178,8 @@ export const {
   useRegisterMutation,
   useLogoutMutation,
   useGetCurrentUserQuery,
+  useRequestPasswordResetMutation,
+  useResetPasswordMutation,
   useGetUserProductsQuery,
   useGetProductByIdQuery,
   useGetPriceHistoryQuery,

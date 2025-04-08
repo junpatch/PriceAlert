@@ -46,3 +46,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         return self.email
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def is_valid(self):
+        """トークンが有効かどうかを検証"""
+        return not self.is_used and self.expires_at > timezone.now()
+        
+
+    def __str__(self):
+        return f"{self.user.email} - {self.token[:10]}..."

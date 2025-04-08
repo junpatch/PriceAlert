@@ -66,7 +66,7 @@ ROOT_URLCONF = "PriceAlert.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -149,6 +149,10 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',  # デバッグ用に便利
+    ]
 }
 
 # JWT設定
@@ -179,3 +183,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# メール設定（開発環境ではコンソール出力）
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@pricealert.example.com'
+FRONTEND_URL = 'http://localhost:5173'  # フロントエンドのURL
+
+# メール設定（本番環境）
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.example.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your_username'
+# EMAIL_HOST_PASSWORD = 'your_password'

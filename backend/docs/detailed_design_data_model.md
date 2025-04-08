@@ -10,6 +10,7 @@ erDiagram
     User ||--o{ UserProduct : registers
     User ||--o{ Notification : receives
     User ||--o{ APIToken : has
+    User ||--o{ PasswordResetToken : has
 
     Product ||--o{ ProductOnECSite : listed_on
     Product ||--o{ UserProduct : registered_by
@@ -138,6 +139,16 @@ erDiagram
         int id PK
         int user_id FK
         string token
+        datetime expires_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    PasswordResetToken {
+        int id PK
+        int user_id FK
+        string token
+        boolean is_used
         datetime expires_at
         datetime created_at
         datetime updated_at
@@ -350,7 +361,7 @@ erDiagram
 | ---------- | ------------ | --------- | ----------------- | ---------------------- |
 | id         | INTEGER      | NO        | AUTO_INCREMENT    | 主キー                 |
 | user_id    | INTEGER      | NO        | -                 | users テーブル外部キー |
-| token      | VARCHAR(255) | NO        | -                 | API トークン           |
+| token      | VARCHAR(255) | NO        | -                 | トークン文字列         |
 | expires_at | DATETIME     | NO        | -                 | 有効期限               |
 | created_at | DATETIME     | NO        | CURRENT_TIMESTAMP | 作成日時               |
 | updated_at | DATETIME     | NO        | CURRENT_TIMESTAMP | 更新日時               |
@@ -358,11 +369,28 @@ erDiagram
 **インデックス:**
 
 - PRIMARY KEY (id)
-- UNIQUE INDEX (token)
 - FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-- INDEX (expires_at)
+- UNIQUE INDEX (token)
 
-#### 4.2.11 product_mappings（商品マッピングテーブル）
+#### 4.2.11 password_reset_tokens（パスワードリセットトークンテーブル）
+
+| カラム名   | データ型     | NULL 許可 | 初期値            | 説明                   |
+| ---------- | ------------ | --------- | ----------------- | ---------------------- |
+| id         | INTEGER      | NO        | AUTO_INCREMENT    | 主キー                 |
+| user_id    | INTEGER      | NO        | -                 | users テーブル外部キー |
+| token      | VARCHAR(255) | NO        | -                 | リセットトークン文字列 |
+| is_used    | BOOLEAN      | NO        | FALSE             | 使用済みフラグ         |
+| expires_at | DATETIME     | NO        | -                 | 有効期限（24 時間）    |
+| created_at | DATETIME     | NO        | CURRENT_TIMESTAMP | 作成日時               |
+| updated_at | DATETIME     | NO        | CURRENT_TIMESTAMP | 更新日時               |
+
+**インデックス:**
+
+- PRIMARY KEY (id)
+- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+- UNIQUE INDEX (token)
+
+#### 4.2.12 product_mappings（商品マッピングテーブル）
 
 | カラム名                     | データ型     | NULL 許可 | 初期値            | 説明                                    |
 | ---------------------------- | ------------ | --------- | ----------------- | --------------------------------------- |

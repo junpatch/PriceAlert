@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .views import RegisterView, LoginView, LogoutView, UserProfileView
+from .views import RegisterView, LoginView, LogoutView, UserProfileView, PasswordResetRequestView, PasswordResetConfirmView
 
 app_name = 'users'
 
@@ -14,4 +14,8 @@ urlpatterns = [
     
     # ユーザープロフィール
     path('me/', UserProfileView.as_view(), name='profile'),
+    
+    # パスワードリセット
+    path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('password-reset/confirm/<str:token_url>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ] 

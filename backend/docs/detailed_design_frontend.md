@@ -238,18 +238,20 @@ export const {
 
 #### 6.5.1 ルート構成
 
-| パス             | コンポーネント    | 認証要否 | 説明               |
-| ---------------- | ----------------- | -------- | ------------------ |
-| `/`              | LandingPage       | 不要     | ランディングページ |
-| `/login`         | LoginPage         | 不要     | ログインページ     |
-| `/register`      | RegisterPage      | 不要     | 会員登録ページ     |
-| `/dashboard`     | DashboardPage     | 必要     | ダッシュボード     |
-| `/products/add`  | AddProductPage    | 必要     | 商品登録ページ     |
-| `/products/:id`  | ProductDetailPage | 必要     | 商品詳細ページ     |
-| `/settings`      | SettingsPage      | 必要     | 設定ページ         |
-| `/notifications` | NotificationsPage | 必要     | 通知一覧ページ     |
-| `/profile`       | ProfilePage       | 必要     | プロフィールページ |
-| `*`              | NotFoundPage      | 不要     | 404 ページ         |
+| パス                     | コンポーネント     | 認証要否 | 説明                             |
+| ------------------------ | ------------------ | -------- | -------------------------------- |
+| `/`                      | LandingPage        | 不要     | ランディングページ               |
+| `/login`                 | LoginPage          | 不要     | ログインページ                   |
+| `/register`              | RegisterPage       | 不要     | 会員登録ページ                   |
+| `/forgot-password`       | ForgotPasswordPage | 不要     | パスワード再設定リクエストページ |
+| `/reset-password/:token` | ResetPasswordPage  | 不要     | パスワード再設定ページ           |
+| `/dashboard`             | DashboardPage      | 必要     | ダッシュボード                   |
+| `/products/add`          | AddProductPage     | 必要     | 商品登録ページ                   |
+| `/products/:id`          | ProductDetailPage  | 必要     | 商品詳細ページ                   |
+| `/settings`              | SettingsPage       | 必要     | 設定ページ                       |
+| `/notifications`         | NotificationsPage  | 必要     | 通知一覧ページ                   |
+| `/profile`               | ProfilePage        | 必要     | プロフィールページ               |
+| `*`                      | NotFoundPage       | 不要     | 404 ページ                       |
 
 #### 6.5.2 ルーティング実装
 
@@ -1424,3 +1426,24 @@ describe("商品登録フロー", () => {
   });
 });
 ```
+
+### 6.7 認証機能設計
+
+#### 6.7.1 認証コンポーネント
+
+| コンポーネント名      | 説明                                 | 主要機能                                               |
+| --------------------- | ------------------------------------ | ------------------------------------------------------ |
+| LoginForm             | ログインフォーム                     | ・メールとパスワードでのログイン<br>・エラー表示       |
+| RegisterForm          | 会員登録フォーム                     | ・ユーザー情報入力<br>・バリデーション                 |
+| AuthLayout            | 認証ページ共通レイアウト             | ・ヘッダー/フッター表示<br>・レスポンシブデザイン      |
+| ForgotPasswordForm    | パスワードリセットリクエストフォーム | ・メールアドレス入力<br>・リセットメール送信リクエスト |
+| ResetPasswordForm     | 新パスワード設定フォーム             | ・新パスワード入力<br>・パスワード変更処理             |
+| PasswordStrengthMeter | パスワード強度メーター               | ・パスワード強度の視覚的表示                           |
+
+#### 6.7.2 認証フック
+
+| フック名         | 説明                   | 主要機能                                        |
+| ---------------- | ---------------------- | ----------------------------------------------- |
+| useAuth          | 認証状態管理           | ・ログイン/ログアウト処理<br>・認証状態チェック |
+| usePasswordReset | パスワードリセット機能 | ・リセットメール送信<br>・パスワード再設定処理  |
+| useRegister      | 会員登録機能           | ・ユーザー登録処理<br>・登録エラーハンドリング  |

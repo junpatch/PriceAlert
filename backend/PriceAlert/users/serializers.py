@@ -58,3 +58,29 @@ class LoginSerializer(serializers.Serializer):
     """
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, write_only=True) 
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    パスワードリセットリクエスト用シリアライザー
+    """
+    email = serializers.EmailField(required=True)
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    パスワードリセット確認用シリアライザー
+    """
+    token = serializers.CharField(required=True)
+    password = serializers.CharField(
+        write_only=True, 
+        required=True, 
+        validators=[validate_password]
+    )
+    confirmPassword = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirmPassword']:
+            raise serializers.ValidationError({"password": "パスワードが一致しません"})
+        return attrs
+

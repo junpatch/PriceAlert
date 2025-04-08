@@ -29,6 +29,8 @@ PriceAlert の API は、React 製フロントエンドと Django REST Framework
 | `/api/auth/login/`                  | POST     | ユーザーログイン       | No                        | -                |
 | `/api/auth/logout/`                 | POST     | ログアウト             | Yes                       | ログインユーザー |
 | `/api/auth/refresh/`                | POST     | トークン更新           | No (リフレッシュトークン) | -                |
+| `/api/auth/password-reset/request/` | POST     | パスワードリセット要求 | No                        | -                |
+| `/api/auth/password-reset/confirm/` | POST     | パスワードリセット確認 | No                        | -                |
 | `/api/users/me/`                    | GET      | 自分のプロフィール取得 | Yes                       | 本人のみ         |
 | `/api/users/me/`                    | PATCH    | プロフィール更新       | Yes                       | 本人のみ         |
 | `/api/users/settings/`              | GET      | ユーザー設定取得       | Yes                       | 本人のみ         |
@@ -99,6 +101,62 @@ PriceAlert の API は、React 製フロントエンドと Django REST Framework
     "email": "user@example.com",
     "username": "username"
   }
+}
+```
+
+##### パスワードリセット要求 (POST /api/auth/password-reset/request/)
+
+**リクエスト：**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**レスポンス (200 OK)：**
+
+```json
+{
+  "detail": "パスワードリセットのリンクをメールで送信しました。"
+}
+```
+
+**エラーレスポンス (400 Bad Request)：**
+
+```json
+{
+  "email": ["このフィールドは必須です。"]
+}
+```
+
+##### パスワードリセット確認 (POST /api/auth/password-reset/confirm/)
+
+**リクエスト：**
+
+```json
+{
+  "token": "リセットトークン",
+  "password": "新しいパスワード",
+  "confirmPassword": "新しいパスワード（確認）"
+}
+```
+
+**レスポンス (200 OK)：**
+
+```json
+{
+  "detail": "パスワードが正常にリセットされました。"
+}
+```
+
+**エラーレスポンス (400 Bad Request)：**
+
+```json
+{
+  "token": ["トークンが無効または期限切れです。"],
+  "password": ["このパスワードは短すぎます。"],
+  "non_field_errors": ["パスワードが一致しません。"]
 }
 ```
 

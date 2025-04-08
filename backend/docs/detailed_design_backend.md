@@ -493,6 +493,116 @@ def custom_exception_handler(exc, context):
     return response
 ```
 
+### 9.4 認証・認可モジュール
+
+#### 9.4.1 認証処理フロー
+
+1. **ログイン処理**
+
+   - `POST /api/v1/auth/login/`
+   - メールアドレスとパスワードの検証
+   - アクセストークン・リフレッシュトークンの生成と返却
+
+2. **トークン検証**
+
+   - リクエストヘッダからトークン取得
+   - トークンの署名検証
+   - ペイロードからユーザー情報取得
+
+3. **トークン更新**
+
+   - `POST /api/v1/auth/token/refresh/`
+   - リフレッシュトークンの検証
+   - 新しいアクセストークンの生成と返却
+
+4. **パスワードリセット**
+
+   - **リセットリクエスト処理**
+
+     - `POST /api/v1/auth/password-reset/request/`
+     - ユーザーのメールアドレス検証
+     - ユーザーが存在する場合、一意のリセットトークンを生成（UUID4）
+     - トークンとユーザーの関連付けをデータベースに保存（`password_reset_tokens`テーブル）
+     - 有効期限（1 時間）とともに保存
+     - リセットリンク（`https://frontend-url/reset-password/{token}`）を含むメールを送信
+     - セキュリティ対策として、リクエスト送信結果はユーザーの存在/不存在に関わらず同一メッセージを返す
+
+   - **パスワードリセット実行処理**
+     - `POST /api/v1/auth/password-reset/confirm/`
+     - トークンの存在検証
+     - トークンの有効期限検証
+     - トークンの使用済み状態検証
+     - 新しいパスワードの強度検証
+     - パスワードのハッシュ化と更新
+     - トークンを使用済みに設定
+     - ユーザーに確認メールを送信
+     - 成功メッセージの返却
+
+#### 9.4.2 認証関連データモデル
+
+1. **User モデル**
+
+   ```python
+   class User(AbstractBaseUser, PermissionsMixin):
+       email = models.EmailField(max_length=255, unique=True)
+       username = models.CharField(max_length=255, blank=True, null=True)
+       is_active = models.BooleanField(default=True)
+       is_staff = models.BooleanField(default=False)
+       date_joined = models.DateTimeField(auto_now_add=True)
+
+       # その他のフィールド...
+   ```
+
+2. **PasswordResetToken モデル**
+   ```python
+   class PasswordResetToken(models.Model):
+       user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+       token = models.CharField(max_length=255, unique=True)
+       is_used = models.BooleanField(default=False)
+       expires_at = models.DateTimeField()
+       created_at = models.DateTimeField(auto_now_add=True)
+       updated_at = models.DateTimeField(auto_now=True)
+
+       def is_valid(self):
+           """トークンが有効かどうかを検証"""
+           return not self.is_used and self.expires_at > timezone.now()
+   ```
+
+#### 9.4.3 パスワードリセットメール送信機能
+
+1. **メール送信処理**
+
+   ```python
+   def send_password_reset_email(user, reset_token):
+       """パスワードリセットメールを送信"""
+       frontend_url = settings.FRONTEND_URL
+       reset_url = f"{frontend_url}/reset-password/{reset_token}"
+
+       subject = "【PriceAlert】パスワードリセットのご案内"
+       html_message = render_to_string(
+           'emails/password_reset.html',
+           {
+               'user': user,
+               'reset_url': reset_url,
+               'valid_hours': 24,
+           }
+       )
+       plain_message = strip_tags(html_message)
+
+       send_mail(
+           subject,
+           plain_message,
+           settings.DEFAULT_FROM_EMAIL,
+           [user.email],
+           html_message=html_message,
+           fail_silently=False,
+       )
+   ```
+
+2. **メールテンプレート管理**
+   - `templates/emails/password_reset.html` - HTML 形式のテンプレート
+   - `templates/emails/password_reset_confirmation.html` - 確認メール用テンプレート
+
 ## 10. テスト方針
 
 ### 10.1 単体テスト

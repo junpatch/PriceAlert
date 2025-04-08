@@ -5,7 +5,7 @@
       "name": "Django: Runserver",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/manage.py",
+      "program": "${workspaceFolder}/PriceAlert/manage.py",
       "args": ["runserver"],
       "django": true,
       "justMyCode": true
@@ -14,7 +14,7 @@
       "name": "Django: Shell",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/manage.py",
+      "program": "${workspaceFolder}/PriceAlert/manage.py",
       "args": ["shell"],
       "django": true,
       "justMyCode": true
@@ -23,7 +23,7 @@
       "name": "Django: Test",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/manage.py",
+      "program": "${workspaceFolder}/PriceAlert/manage.py",
       "args": ["test"],
       "django": true,
       "justMyCode": true
