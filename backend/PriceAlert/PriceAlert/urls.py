@@ -23,4 +23,5 @@ urlpatterns = [
     
     # API V1エンドポイント
     path('api/v1/auth/', include('users.urls')),
+    path('api/v1/', include('products.urls')),
 ]

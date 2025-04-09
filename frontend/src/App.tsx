@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   Outlet,
+  useLocation,
 } from "react-router-dom";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { ToastContainer } from "react-toastify";
@@ -61,9 +62,18 @@ const theme = createTheme({
 // 認証が必要なルートのラッパーコンポーネント
 const ProtectedRoute: React.FC = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const location = useLocation();
 
+  // セッション切れでログインページに戻される場合、state経由でメッセージを渡す
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // ログインページ以外からのリダイレクトであれば、元のパスを保存
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname, sessionExpired: true }}
+        replace
+      />
+    );
   }
 
   return <Outlet />;

@@ -23,34 +23,73 @@ PriceAlert の API は、React 製フロントエンドと Django REST Framework
 
 ### 5.3 エンドポイント一覧
 
-| エンドポイント                      | メソッド | 説明                   | 認証必須                  | アクセス権限     |
-| ----------------------------------- | -------- | ---------------------- | ------------------------- | ---------------- |
-| `/api/auth/register/`               | POST     | ユーザー登録           | No                        | -                |
-| `/api/auth/login/`                  | POST     | ユーザーログイン       | No                        | -                |
-| `/api/auth/logout/`                 | POST     | ログアウト             | Yes                       | ログインユーザー |
-| `/api/auth/refresh/`                | POST     | トークン更新           | No (リフレッシュトークン) | -                |
-| `/api/auth/password-reset/request/` | POST     | パスワードリセット要求 | No                        | -                |
-| `/api/auth/password-reset/confirm/` | POST     | パスワードリセット確認 | No                        | -                |
-| `/api/users/me/`                    | GET      | 自分のプロフィール取得 | Yes                       | 本人のみ         |
-| `/api/users/me/`                    | PATCH    | プロフィール更新       | Yes                       | 本人のみ         |
-| `/api/users/settings/`              | GET      | ユーザー設定取得       | Yes                       | 本人のみ         |
-| `/api/users/settings/`              | PUT      | ユーザー設定更新       | Yes                       | 本人のみ         |
-| `/api/products/`                    | GET      | 登録商品一覧取得       | Yes                       | 本人の商品のみ   |
-| `/api/products/`                    | POST     | 商品登録               | Yes                       | ログインユーザー |
-| `/api/products/{id}/`               | GET      | 商品詳細取得           | Yes                       | 本人の商品のみ   |
-| `/api/products/{id}/`               | PUT      | 商品更新               | Yes                       | 本人の商品のみ   |
-| `/api/products/{id}/`               | DELETE   | 商品削除               | Yes                       | 本人の商品のみ   |
-| `/api/products/{id}/price-history/` | GET      | 価格履歴取得           | Yes                       | 本人の商品のみ   |
-| `/api/products/{id}/alerts/`        | GET      | アラート設定一覧       | Yes                       | 本人の商品のみ   |
-| `/api/products/{id}/alerts/`        | POST     | アラート設定追加       | Yes                       | 本人の商品のみ   |
-| `/api/alerts/{id}/`                 | GET      | アラート詳細取得       | Yes                       | 本人の設定のみ   |
-| `/api/alerts/{id}/`                 | PUT      | アラート更新           | Yes                       | 本人の設定のみ   |
-| `/api/alerts/{id}/`                 | DELETE   | アラート削除           | Yes                       | 本人の設定のみ   |
-| `/api/notifications/`               | GET      | 通知一覧取得           | Yes                       | 本人の通知のみ   |
-| `/api/notifications/mark-read/`     | POST     | 通知既読化             | Yes                       | 本人の通知のみ   |
-| `/api/ec-sites/`                    | GET      | EC サイト一覧          | Yes                       | 全ユーザー       |
-| `/api/product-search/`              | GET      | 商品検索               | Yes                       | 全ユーザー       |
-| `/api/product-url/parse/`           | POST     | 商品 URL 解析          | Yes                       | 全ユーザー       |
+| エンドポイント                             | メソッド | 説明                   | 認証必須                  | アクセス権限     | フロント実装 | バック実装 | 整合性確認 |
+| ------------------------------------------ | -------- | ---------------------- | ------------------------- | ---------------- | ------------ | ---------- | ---------- |
+| `/api/auth/register/`                      | POST     | ユーザー登録           | No                        | -                | ✅           | ✅         | ✅         |
+| `/api/auth/login/`                         | POST     | ユーザーログイン       | No                        | -                | ✅           | ✅         | ✅         |
+| `/api/auth/logout/`                        | POST     | ログアウト             | Yes                       | ログインユーザー | ✅           | ✅         | ✅         |
+| `/api/auth/refresh/`                       | POST     | トークン更新           | No (リフレッシュトークン) | -                | ✅           | ✅         | ❌         |
+| `/api/auth/password-reset/request/`        | POST     | パスワードリセット要求 | No                        | -                | ✅           | ✅         | ✅         |
+| `/api/auth/password-reset/confirm/<token>` | POST     | パスワードリセット確認 | No                        | -                | ✅           | ✅         | ✅         |
+| `/api/users/me/`                           | GET      | 自分のプロフィール取得 | Yes                       | 本人のみ         | ✅           | ❌         | ❌         |
+| `/api/users/me/`                           | PATCH    | プロフィール更新       | Yes                       | 本人のみ         | ✅           | ❌         | ❌         |
+| `/api/users/settings/`                     | GET      | ユーザー設定取得       | Yes                       | 本人のみ         | ✅           | ❌         | ❌         |
+| `/api/users/settings/`                     | PUT      | ユーザー設定更新       | Yes                       | 本人のみ         | ✅           | ❌         | ❌         |
+| `/api/products/`                           | GET      | 登録商品一覧取得       | Yes                       | 本人の商品のみ   | ❌           | ✅         | ❌         |
+| `/api/products/`                           | POST     | 商品登録               | Yes                       | ログインユーザー | ❌           | ❌         | ❌         |
+| `/api/products/{id}/`                      | GET      | 商品詳細取得           | Yes                       | 本人の商品のみ   | ❌           | ✅         | ❌         |
+| `/api/products/{id}/`                      | PUT      | 商品更新               | Yes                       | 本人の商品のみ   | ❌           | ❌         | ❌         |
+| `/api/products/{id}/`                      | DELETE   | 商品削除               | Yes                       | 本人の商品のみ   | ❌           | ❌         | ❌         |
+| `/api/user-products/`                           | GET      | ユーザー登録商品一覧取得       | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
+| `/api/user-products/`                           | POST     | ユーザー商品登録               | Yes                       | ログインユーザー | ✅           | ✅         | ✅         |
+| `/api/user-products/{id}/`                      | GET      | ユーザー商品詳細取得           | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
+| `/api/user-products/{id}/`                      | PUT,PATCH | ユーザー商品更新               | Yes                       | 本人の商品のみ   | ✅           | ✅         | ❌         |
+| `/api/user-products/{id}/`                      | DELETE   | ユーザー商品削除               | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
+| `/api/products/{id}/price-history/`        | GET      | 価格履歴取得           | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
+| `/api/products/{id}/alerts/`               | GET      | アラート設定一覧       | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
+| `/api/products/{id}/alerts/`               | POST     | アラート設定追加       | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
+| `/api/alerts/{id}/`                        | GET      | アラート詳細取得       | Yes                       | 本人の設定のみ   | ✅           | ❌         | ❌         |
+| `/api/alerts/{id}/`                        | PUT      | アラート更新           | Yes                       | 本人の設定のみ   | ✅           | ❌         | ❌         |
+| `/api/alerts/{id}/`                        | DELETE   | アラート削除           | Yes                       | 本人の設定のみ   | ✅           | ❌         | ❌         |
+| `/api/notifications/`                      | GET      | 通知一覧取得           | Yes                       | 本人の通知のみ   | ✅           | ❌         | ❌         |
+| `/api/notifications/mark-read/`            | POST     | 通知既読化             | Yes                       | 本人の通知のみ   | ✅           | ❌         | ❌         |
+| `/api/ec-sites/`                           | GET      | EC サイト一覧          | Yes                       | 全ユーザー       | ✅           | ❌         | ❌         |
+| `/api/product-search/`                     | GET      | 商品検索               | Yes                       | 全ユーザー       | ✅           | ❌         | ❌         |
+| `/api/product-url/parse/`                  | POST     | 商品 URL 解析          | Yes                       | 全ユーザー       | ✅           | ❌         | ❌         |
+
+#### 5.3.1 実装メモ
+
+フロントエンド側では、すべての API エンドポイントの実装が完了しています。以下の修正を行いました：
+
+1. エンドポイントパスの修正
+
+   - 仕様書に合わせて以下のエンドポイントパスを修正：
+     - `auth/me/` → `users/me/`
+     - `user-products/` → `products/`
+     - `user-products/{id}/` → `products/{id}/`
+     - `notifications/{id}/read/` → `notifications/mark-read/`
+     - `notifications/read-all/` → `notifications/mark-read/`
+     - `user-settings/` → `users/settings/`
+     - `auth/password-reset/confirm/${token}/` → `auth/password-reset/confirm/`
+
+2. 次のステップ：
+
+   - バックエンド側 API エンドポイントの実装
+
+     - Django REST Framework を使用した各エンドポイントの実装
+     - 認証・認可ロジックの実装
+     - バリデーションの実装
+
+   - フロントエンドとバックエンドの整合性確認
+     - 各エンドポイントのリクエスト・レスポンス形式の確認
+     - エラーハンドリングの確認
+     - パフォーマンステスト
+
+3. 優先実装順序
+   - 認証系 API（ログイン、登録、トークン更新）
+   - 商品管理 API
+   - アラート設定 API
+   - 通知系 API
 
 ### 5.4 主要 API エンドポイント詳細
 

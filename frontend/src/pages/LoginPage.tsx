@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -10,12 +10,13 @@ import {
   Alert,
   Grid,
 } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@features/auth/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ErrorAlert from "@components/common/ErrorAlert";
+import { toast } from "react-toastify";
 
 interface LoginFormData {
   email: string;
@@ -36,6 +37,23 @@ const schema = yup.object().shape({
 const LoginPage: React.FC = () => {
   const { login, loading, error } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // ロケーション情報を取得して、セッション切れの場合にメッセージを表示
+  const location = useLocation();
+  const { state } = location;
+
+  useEffect(() => {
+    // セッション切れのフラグがあればトースト通知を表示
+    if (state && state.sessionExpired) {
+      toast.warning(
+        "セッションの有効期限が切れました。再度ログインしてください。",
+        {
+          position: "top-center",
+          autoClose: 5000,
+        }
+      );
+    }
+  }, [state]);
 
   const {
     register,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Card,
   CardContent,
@@ -10,16 +10,16 @@ import {
   CardActions,
   Chip,
   Tooltip,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   ShoppingCart as ShoppingCartIcon,
   Notifications as NotificationsIcon,
   NotificationsOff as NotificationsOffIcon,
-} from '@mui/icons-material';
-import { Link } from 'react-router-dom';
-import { UserProduct } from '@types/index';
+} from "@mui/icons-material";
+import { Link } from "react-router-dom";
+import { UserProduct, ProductOnECSite } from "../../types";
 
 interface ProductCardProps {
   userProduct: UserProduct;
@@ -33,46 +33,87 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onToggleNotification,
 }) => {
   const { id, product, notification_enabled } = userProduct;
-  
+
   if (!product) return null;
-  
-  const lowestPrice = product.ec_sites?.reduce((min, site) => {
-    return site.current_price && (min === null || site.current_price < min)
-      ? site.current_price
-      : min;
-  }, null as number | null);
-  
+
+  // デバッグ用
+  if (import.meta.env.DEV) {
+    console.log("ProductCard - 商品データ:", product);
+    console.log("ProductCard - EC情報(ec_sites):", product.ec_sites);
+  }
+
+  const ecSites = product.ec_sites || [];
+
+  // 型引数を使わずに明示的な型定義
+  const lowestPrice = ecSites.reduce(
+    (min: number | null, site: ProductOnECSite) => {
+      return site.current_price &&
+        (min === null || parseFloat(site.current_price.toString()) < min)
+        ? parseFloat(site.current_price.toString())
+        : min;
+    },
+    null
+  );
+
+  if (import.meta.env.DEV) {
+    console.log("ProductCard - 最安値:", lowestPrice);
+  }
+
   const getBestEcSite = () => {
-    if (!product.ec_sites || product.ec_sites.length === 0) return null;
-    
-    return product.ec_sites.reduce((best, site) => {
-      if (!site.current_price) return best;
-      if (!best || !best.current_price) return site;
-      return site.current_price < best.current_price ? site : best;
-    }, null);
+    if (ecSites.length === 0) return null;
+
+    // 型引数を使わずに明示的な型定義
+    return ecSites.reduce(
+      (best: ProductOnECSite | null, site: ProductOnECSite) => {
+        if (!site.current_price) return best;
+        if (!best || !best.current_price) return site;
+        return parseFloat(site.current_price.toString()) <
+          parseFloat(best.current_price.toString())
+          ? site
+          : best;
+      },
+      null
+    );
   };
-  
+
   const bestSite = getBestEcSite();
-  
+
+  if (import.meta.env.DEV) {
+    console.log("ProductCard - 最安値サイト:", bestSite);
+  }
+
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardMedia
         component="img"
-        sx={{ 
-          height: 140, 
-          objectFit: 'contain',
-          backgroundColor: '#f5f5f5', 
-          p: 1 
+        sx={{
+          height: 140,
+          objectFit: "contain",
+          backgroundColor: "#f5f5f5",
+          p: 1,
         }}
-        image={product.image_url || '/placeholder.png'}
+        image={product.image_url || "/placeholder.png"}
         alt={product.name}
       />
       <CardContent sx={{ flexGrow: 1 }}>
-        <Typography gutterBottom variant="h6" component="div" noWrap title={product.name}>
+        <Typography
+          gutterBottom
+          variant="h6"
+          component="div"
+          noWrap
+          title={product.name}
+        >
           {product.name}
         </Typography>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 1,
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             最安値:
           </Typography>
@@ -86,13 +127,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </Typography>
           )}
         </Box>
-        
+
         {bestSite && (
           <Box sx={{ mt: 1 }}>
-            <Chip 
+            <Chip
               size="small"
-              label={bestSite.ec_site?.name || 'ECサイト'} 
-              color="primary" 
+              label={bestSite.ec_site?.name || "ECサイト"}
+              color="primary"
               variant="outlined"
             />
           </Box>
@@ -106,24 +147,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </Box>
         )}
       </CardContent>
-      
-      <CardActions sx={{ justifyContent: 'space-between', p: 2, pt: 0 }}>
+
+      <CardActions sx={{ justifyContent: "space-between", p: 2, pt: 0 }}>
         <Box>
           <Tooltip title="編集">
-            <IconButton 
-              component={Link} 
-              to={`/products/${product.id}`} 
+            <IconButton
+              component={Link}
+              to={`/products/${id}`}
               aria-label="編集"
               size="small"
             >
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          
-          <Tooltip title={notification_enabled ? "通知を無効化" : "通知を有効化"}>
+
+          <Tooltip
+            title={notification_enabled ? "通知を無効化" : "通知を有効化"}
+          >
             <IconButton
               onClick={() => onToggleNotification(id, !notification_enabled)}
-              aria-label={notification_enabled ? "通知を無効化" : "通知を有効化"}
+              aria-label={
+                notification_enabled ? "通知を無効化" : "通知を有効化"
+              }
               color={notification_enabled ? "primary" : "default"}
               size="small"
             >
@@ -134,7 +179,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
             </IconButton>
           </Tooltip>
-          
+
           <Tooltip title="削除">
             <IconButton
               onClick={() => onDelete(id)}
@@ -146,7 +191,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </IconButton>
           </Tooltip>
         </Box>
-        
+
         {bestSite && bestSite.affiliate_url && (
           <Button
             size="small"
@@ -166,4 +211,4 @@ const ProductCard: React.FC<ProductCardProps> = ({
   );
 };
 
-export default ProductCard; 
+export default ProductCard;

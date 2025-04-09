@@ -25,11 +25,11 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            refresh = RefreshToken.for_user(user)
+            refresh = RefreshToken.for_user(user) # type: ignore
             
             response_data = {
                 'refresh_token': str(refresh),
-                'access_token': str(refresh.access_token),
+                'access_token': str(refresh.access_token), # type: ignore
                 'user': UserSerializer(user).data
             }
             
@@ -46,8 +46,8 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data.get('email')
-            password = serializer.validated_data.get('password')
+            email = serializer.validated_data.get('email') # type: ignore
+            password = serializer.validated_data.get('password') # type: ignore
             
             # ユーザー認証
             user = authenticate(request, email=email, password=password)
@@ -60,7 +60,7 @@ class LoginView(APIView):
                 
                 response_data = {
                     'refresh_token': str(refresh),
-                    'access_token': str(refresh.access_token),
+                    'access_token': str(refresh.access_token), # type: ignore
                     'user': UserSerializer(user).data
                 }
                 
@@ -123,7 +123,7 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data.get('email')
+            email = serializer.validated_data.get('email') # type: ignore
 
             response_message = {
                 'detail': 'パスワードリセットのリンクをメールで送信しました。'
@@ -195,8 +195,8 @@ class PasswordResetConfirmView(APIView):
             
         serializer = PasswordResetConfirmSerializer(data=request.data)
         if serializer.is_valid():
-            token_str = serializer.validated_data.get('token')
-            password = serializer.validated_data.get('password')
+            token_str = serializer.validated_data.get('token') # type: ignore
+            password = serializer.validated_data.get('password') # type: ignore
             
             try:
                 # トークン検証
