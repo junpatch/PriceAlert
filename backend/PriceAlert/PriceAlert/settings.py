@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-
+import colorlog
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -205,3 +205,92 @@ FRONTEND_URL = 'http://localhost:5173'  # フロントエンドのURL
 AMAZON_API_KEY = os.getenv('AMAZON_API_KEY')
 AMAZON_API_SECRET = os.getenv('AMAZON_API_SECRET')
 AMAZON_ASSOCIATE_TAG = os.getenv('AMAZON_ASSOCIATE_TAG')
+
+# ログ設定
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)  # フォルダがなければ作る
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] [{levelname}] [{name}] [{module}:{lineno}] {message}',
+            'style': '{',
+        },
+        'colored': {
+            '()': 'PriceAlert.log_format.CustomColoredFormatter',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'colored',
+        },
+        'file_debug': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': str(LOG_DIR / 'debug.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'file_info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': str(LOG_DIR / 'info.log'),
+            'when': 'midnight',
+            'backupCount': 14,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': str(LOG_DIR / 'error.log'),
+            'when': 'midnight',
+            'backupCount': 30,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file_info', 'file_error'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.server': {
+            'handlers': ['console', 'file_info'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console', 'file_debug'] if DEBUG else ['file_debug'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['file_error', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'products': {
+            'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
+        'users': {
+            'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
+    },
+}

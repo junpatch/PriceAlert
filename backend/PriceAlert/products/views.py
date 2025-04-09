@@ -1,3 +1,4 @@
+import logging
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework import serializers
@@ -10,6 +11,8 @@ from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
 # Create your views here.
 
+logger = logging.getLogger('products.views')
+
 class ProductViewSet(viewsets.ViewSet):
     """
     商品操作のAPI
@@ -19,18 +22,37 @@ class ProductViewSet(viewsets.ViewSet):
     # GET: products/
     def list(self, request):
         """商品一覧を返す GET: products/"""
-        # TODO: ユーザーの商品のみ表示になっているので要修正
-        queryset = Product.objects.filter(userproduct__user=request.user).distinct()
-        serializer = ProductSerializer(queryset, many=True)
-        return Response(serializer.data)
+        logger.info('商品一覧の取得を開始 - ユーザー: %s', request.user.username)
+        try:
+            # TODO: ユーザーの商品のみ表示になっているので要修正
+            queryset = Product.objects.filter(userproduct__user=request.user).distinct()
+            serializer = ProductSerializer(queryset, many=True)
+            logger.debug('商品一覧を取得しました - 件数: %d', len(serializer.data))
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error('商品一覧の取得中にエラーが発生しました - ユーザー: %s, エラー: %s', 
+                        request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # GET: products/{pk}/
     def retrieve(self, request, pk=None):
         """特定の商品の詳細を返す GET: products/{pk}/"""
-        # TODO: ユーザーの商品のみ表示になっているので要修正
-        product = get_object_or_404(Product, pk=pk, userproduct__user=request.user)
-        serializer = ProductSerializer(product)
-        return Response(serializer.data)
+        logger.info('商品詳細の取得を開始 - 商品ID: %s, ユーザー: %s', pk, request.user.username)
+        try:
+            # TODO: ユーザーの商品のみ表示になっているので要修正
+            product = get_object_or_404(Product, pk=pk, userproduct__user=request.user)
+            serializer = ProductSerializer(product)
+            logger.debug('商品詳細を取得しました - 商品: %s', product.name)
+            return Response(serializer.data)
+        except Product.DoesNotExist:
+            logger.warning('商品が見つかりません - 商品ID: %s, ユーザー: %s', pk, request.user.username)
+            return Response({"detail": "商品が見つかりません"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error('商品詳細の取得中にエラーが発生しました - 商品ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # POST: products/
     def create(self, request):
@@ -50,23 +72,46 @@ class UserProductViewSet(viewsets.ViewSet):
     # GET: user-products/
     def list(self, request):
         """ログインユーザーの商品のみ表示"""
-        queryset = UserProduct.objects.filter(user=request.user).select_related('product')
-        serializer = UserProductSerializer(queryset, many=True)
-        return Response(serializer.data)
+        logger.info('ユーザー商品一覧の取得を開始 - ユーザー: %s', request.user.username)
+        try:
+            queryset = UserProduct.objects.filter(user=request.user).select_related('product')
+            serializer = UserProductSerializer(queryset, many=True)
+            logger.debug('ユーザー商品一覧を取得しました - 件数: %d', len(serializer.data))
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error('ユーザー商品一覧の取得中にエラーが発生しました - ユーザー: %s, エラー: %s', 
+                        request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # GET: user-products/{pk}/
     def retrieve(self, request, *args, **kwargs):
         """ログインユーザーの指定商品を取得"""
-        user_product = get_object_or_404(UserProduct, pk=kwargs['pk'], user=request.user)
-        serializer = UserProductSerializer(user_product)
-        return Response(serializer.data)
+        pk = kwargs['pk']
+        logger.info('ユーザー商品詳細の取得を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
+        try:
+            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            serializer = UserProductSerializer(user_product)
+            logger.debug('ユーザー商品詳細を取得しました - 商品: %s', user_product.product.name)
+            return Response(serializer.data)
+        except UserProduct.DoesNotExist:
+            logger.warning('ユーザー商品が見つかりません - ID: %s, ユーザー: %s', pk, request.user.username)
+            return Response({"detail": "商品が見つかりません"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error('ユーザー商品詳細の取得中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # POST: user-products/
     def create(self, request):
         """URLからログインユーザーの商品を登録"""
         url = request.data.get('url')
         price_threshold = request.data.get('price_threshold')
+        logger.info('商品登録を開始 - URL: %s..., ユーザー: %s', url[:30] if url else None, request.user.username)
+
         if not url:
+            logger.warning('URLが指定されていません - ユーザー: %s', request.user.username)
             return Response({"detail": "URLが指定されていません。"}, status=status.HTTP_400_BAD_REQUEST)
 
         # URLの形式チェック
@@ -74,6 +119,7 @@ class UserProductViewSet(viewsets.ViewSet):
         try:
             validator(url)
         except ValidationError:
+            logger.warning('不正なURL形式です - URL: %s, ユーザー: %s', url, request.user.username)
             return Response({"detail": "URLの形式が正しくありません。"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
@@ -85,52 +131,111 @@ class UserProductViewSet(viewsets.ViewSet):
             )
 
             serializer = UserProductSerializer(result['user_product'])
+            logger.info('商品登録が完了しました - 商品: %s, ユーザー: %s', 
+                       result['product'].name, request.user.username)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         except ValueError as e:
+            logger.warning('商品登録の入力値エラー - URL: %s, ユーザー: %s, エラー: %s', 
+                         url, request.user.username, str(e))
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except ConnectionError as e:
-            return Response({"detail": "外部サービスとの接続に失敗しました"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            logger.error('外部サービス接続エラー - URL: %s, ユーザー: %s, エラー: %s', 
+                        url, request.user.username, str(e))
+            return Response({"detail": "外部サービスとの接続に失敗しました"}, 
+                          status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
-            return Response({"detail": "予期せぬエラーが発生しました"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error('商品登録中に予期せぬエラーが発生しました - URL: %s, ユーザー: %s, エラー: %s', 
+                        url, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # PUT: user-products/{pk}/
     def update(self, request, *args, **kwargs):
         """ユーザーと商品の関連付けを更新"""
-        user_product = get_object_or_404(UserProduct, pk=kwargs['pk'], user=request.user)
-        serializer = self._update_user_product(user_product, request.data, partial=False)
-        return Response(serializer.data)
+        pk = kwargs['pk']
+        logger.info('ユーザー商品の更新を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
+        try:
+            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            serializer = self._update_user_product(user_product, request.data, partial=False)
+            logger.info('ユーザー商品を更新しました - 商品: %s..., ユーザー: %s', 
+                       user_product.product.name[:20], request.user.username)
+            return Response(serializer.data)
+        except UserProduct.DoesNotExist:
+            logger.warning('更新対象のユーザー商品が見つかりません - ID: %s, ユーザー: %s', 
+                         pk, request.user.username)
+            return Response({"detail": "商品が見つかりません"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error('ユーザー商品の更新中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     # PATCH: user-products/{pk}/
     def partial_update(self, request, *args, **kwargs):
         """ユーザーと商品の関連付けを更新"""
-        user_product = get_object_or_404(UserProduct, pk=kwargs['pk'], user=request.user)
-        serializer = self._update_user_product(user_product, request.data, partial=True)
-        return Response(serializer.data)
+        pk = kwargs['pk']
+        logger.info('ユーザー商品の部分更新を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
+        try:
+            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            serializer = self._update_user_product(user_product, request.data, partial=True)
+            logger.info('ユーザー商品を部分更新しました - 商品: %s..., ユーザー: %s', 
+                       user_product.product.name[:20], request.user.username)
+            return Response(serializer.data)
+        except UserProduct.DoesNotExist:
+            logger.warning('部分更新対象のユーザー商品が見つかりません - ID: %s, ユーザー: %s', 
+                         pk, request.user.username)
+            return Response({"detail": "商品が見つかりません"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error('ユーザー商品の部分更新中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # DELETE: user-products/{pk}/
     def destroy(self, request, *args, **kwargs):
         """商品を削除する前に、ユーザーとの関連付けを確認"""
-        # このユーザーに紐づく商品かを確認
-        user_product = get_object_or_404(UserProduct, pk=kwargs['pk'], user=request.user)
-        serializer = UserProductSerializer(user_product)
+        pk = kwargs['pk']
+        logger.info('ユーザー商品の削除を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
+            # このユーザーに紐づく商品かを確認
+            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            product_name = user_product.product.name
+            
             # 他のユーザーも使っている場合は関連付けのみ削除
-            if user_product.product.userproduct.count() <= 1:
+            if user_product.product.userproduct.count() <= 1: # type: ignore
+                logger.info('商品を完全に削除します - 商品: %s..., ユーザー: %s', product_name[:20], request.user.username)
                 user_product.product.delete()
             else:
+                logger.info('ユーザーと商品の関連付けのみ削除します - 商品: %s..., ユーザー: %s', 
+                          product_name[:20], request.user.username)
                 user_product.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         except UserProduct.DoesNotExist:
+            logger.warning('削除対象のユーザー商品が見つかりません - ID: %s, ユーザー: %s', 
+                         pk, request.user.username)
             return Response({"detail": "この商品は登録されていません。"}, status=status.HTTP_404_NOT_FOUND)
-    
+        except Exception as e:
+            logger.error('ユーザー商品の削除中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _update_user_product(self, user_product, data, partial=False):
-        serializer = UserProductSerializer(user_product, data=data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return serializer
+        try:
+            serializer = UserProductSerializer(user_product, data=data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return serializer
+        except serializers.ValidationError as e:
+            logger.warning('ユーザー商品の更新でバリデーションエラー - 商品: %s, ユーザー: %s, エラー: %s', 
+                         user_product.product.name, user_product.user.username, str(e))
+            raise
+        except Exception as e:
+            logger.error('ユーザー商品の更新で予期せぬエラー - 商品: %s, ユーザー: %s, エラー: %s', 
+                        user_product.product.name, user_product.user.username, str(e), exc_info=True)
+            raise
     
 # ここから下はAPI仕様書外の実装。使うにはフロント側でも対応が必要。
 class ProductOnECSiteViewSet(viewsets.ModelViewSet):
@@ -142,6 +247,7 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """ユーザーが登録した商品に関連するECサイト情報のみ返す"""
+        logger.debug('ECサイト商品情報の取得を開始 - ユーザー: %s', self.request.user.username) # type: ignore
         user_products = UserProduct.objects.filter(user=self.request.user).values_list('product_id', flat=True)
         return ProductOnECSite.objects.filter(product_id__in=user_products)
     
@@ -149,10 +255,16 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """商品がユーザーに紐づいているか確認してから保存"""
         product_id = serializer.validated_data.get('product').id
+        logger.info('ECサイト商品情報の作成を開始 - 商品ID: %s, ユーザー: %s', 
+                   product_id, self.request.user.username) # type: ignore
         try:
             # ユーザーが登録している商品か確認
             UserProduct.objects.get(user=self.request.user, product_id=product_id)
             serializer.save()
+            logger.info('ECサイト商品情報を作成しました - 商品ID: %s, ユーザー: %s', 
+                       product_id, self.request.user.username) # type: ignore
         except UserProduct.DoesNotExist:
+            logger.warning('未登録の商品に対するECサイト情報作成の試み - 商品ID: %s, ユーザー: %s', 
+                         product_id, self.request.user.username) # type: ignore
             raise serializers.ValidationError("この商品は登録されていません。")
         
