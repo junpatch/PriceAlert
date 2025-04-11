@@ -28,3 +28,14 @@ class UserProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'product',  'price_threshold', 'threshold_type', 'threshold_percentage', 'notification_enabled', 'display_order', 'memo', 'created_at', 'updated_at']
         read_only_fields = ['user']
 
+class ProductRegistrationSerializer(serializers.Serializer):
+    """商品登録用のシリアライザ"""
+    url = serializers.URLField(required=False)
+    jan_code = serializers.RegexField(r'^\d{13}$', required=False)
+    price_threshold = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
+    def validate(self, data):
+        """URLまたはJANコードのいずれかが必要"""
+        if not data.get('url') and not data.get('jan_code'):
+            raise serializers.ValidationError("URLまたはJANコードのいずれかを指定してください。")
+        return data

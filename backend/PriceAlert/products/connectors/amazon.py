@@ -3,10 +3,15 @@ from amazon.paapi import AmazonAPI
 from decimal import Decimal
 from django.conf import settings
 import re
+import logging
+from amazon.paapi import AmazonException
+
+logger = logging.getLogger(__name__)
 
 class AmazonConnector(ECConnector):
 
     def __init__(self):
+        self.ec_site = "amazon"
         self.amazon_api = AmazonAPI(
             access_key = settings.AMAZON_API_KEY,
             secret_key = settings.AMAZON_API_SECRET,
@@ -14,20 +19,47 @@ class AmazonConnector(ECConnector):
             country="JP"
         )
 
-    def fetch_product_info(self, url):
+    def fetch_product_info(self, url=None, jan_code=None):
         """商品URLから情報を取得する"""
-        asin = self.extract_asin(url)
-        if not asin:
-            raise ValueError("URLからASINが見つかりませんでした")
+        logger.info("---Amazonで検索開始---")
+        if url:
+            asin = self.extract_asin(url)
+            if not asin:
+                logger.warning("URLからASINが見つかりませんでした - URL: %s", url)
+                return None
+            response = self.amazon_api.get_items(
+                item_ids=[asin]
+            )
+            item = response.get("data", {}).get(asin)
+            if hasattr(item.item_info._external_ids, 'ea_ns') and item.item_info._external_ids.ea_ns:
+                jan_code = [int(code) for code in item.item_info._external_ids.ea_ns.display_values]
 
-        response = self.amazon_api.get_items(
-            item_ids=[asin]
-        )
+        elif jan_code:
+            try:
+                response = self.amazon_api.search_items(
+                    keywords=jan_code
+                )
+            except AmazonException as e:    
+                if "No results found" in str(e):
+                    logger.warning("Amazon検索結果が見つかりませんでした: %s", e)
+                    return None
+                else:
+                    logger.error("Amazon APIで予期しないエラー: %s", e)
+                    raise
 
-        item = response.get("data", {}).get(asin)
+            item = response.get("data", {})[0]
+            if hasattr(item, 'asin'):
+                asin = item.asin
+            if hasattr(item, 'detail_page_url'):
+                url = item.detail_page_url
+        else:
+            logger.error("URLかJANコードが指定されていません")
+            return None
+        
         if not item:
-            raise ValueError(f"商品情報が取得できませんでした: {asin}")
-
+            logger.warning("商品情報が取得できませんでした - ASIN: %s, JANコード: %s", asin, jan_code)
+            return None
+  
         # 価格情報抽出
         price = Decimal('0')
         if hasattr(item, 'offers') and item.offers and item.offers.listings:
@@ -51,26 +83,24 @@ class AmazonConnector(ECConnector):
         
         # 型番やJANコードの取得（可能な場合）
         model_number = ""
-        jan_code = ""
-        if hasattr(item.item_info._external_ids, 'ea_ns') and item.item_info._external_ids.ea_ns:
-            jan_code = [int(code) for code in item.item_info._external_ids.ea_ns.display_values]
         
         # アフィリエイトURL生成
         affiliate_url = f"https://www.amazon.co.jp/dp/{asin}/?tag={settings.AMAZON_ASSOCIATE_TAG}"
         
-        return {
+        return [{
             'name': name,
             'description': description,
             'image_url': image_url,
             'manufacturer': manufacturer,
             'model_number': model_number,
-            'jan_code': jan_code,
+            'jan_code': [int(jan_code)] if isinstance(jan_code, str) else jan_code,
             'price': price,
             'points': Decimal('0'),  # ポイント情報はPA APIでは取得が難しい場合がある
             'ec_product_id': asin,
             'product_url': url,
-            'affiliate_url': affiliate_url
-        }
+            'affiliate_url': affiliate_url,
+            'ec_site': 'amazon'
+        }]
 
     def extract_asin(self, url):
         """商品URLからASINを抽出する"""

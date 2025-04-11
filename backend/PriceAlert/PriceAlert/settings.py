@@ -14,7 +14,8 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-import colorlog
+
+
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -206,6 +207,12 @@ AMAZON_API_KEY = os.getenv('AMAZON_API_KEY')
 AMAZON_API_SECRET = os.getenv('AMAZON_API_SECRET')
 AMAZON_ASSOCIATE_TAG = os.getenv('AMAZON_ASSOCIATE_TAG')
 
+# 楽天 APIキー
+RAKUTEN_API_KEY = os.getenv('RAKUTEN_API_KEY')
+RAKUTEN_API_SECRET = os.getenv('RAKUTEN_API_SECRET')
+RAKUTEN_AFFILIATE_ID = os.getenv('RAKUTEN_AFFILIATE_ID')
+
+
 # ログ設定
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)  # フォルダがなければ作る
@@ -263,32 +270,38 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_info', 'file_error'],
             'level': 'INFO',
             'propagate': True,
         },
         'django.server': {
-            'handlers': ['console', 'file_info'],
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_info'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.db.backends': {
-            'handlers': ['console', 'file_debug'] if DEBUG else ['file_debug'],
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_debug'] if DEBUG else ['file_debug'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'django.security': {
-            'handlers': ['file_error', 'mail_admins'],
+            'handlers': [],
+            # 'handlers': ['file_error', 'mail_admins'],
             'level': 'ERROR',
             'propagate': False,
         },
         'products': {
-            'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': True,
         },
         'users': {
-            'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': True,
         },

@@ -1,9 +1,10 @@
 import logging
+import re
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework import serializers
 from .models import Product, UserProduct, ProductOnECSite, ECSite
-from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer
+from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer
 from rest_framework import viewsets
 from django.shortcuts import get_object_or_404
 from .services import ProductService
@@ -105,35 +106,34 @@ class UserProductViewSet(viewsets.ViewSet):
     
     # POST: user-products/
     def create(self, request):
-        """URLからログインユーザーの商品を登録"""
-        url = request.data.get('url')
-        price_threshold = request.data.get('price_threshold')
-        logger.info('商品登録を開始 - URL: %s..., ユーザー: %s', url[:30] if url else None, request.user.username)
+        """URLかJANコードからログインユーザーの商品を登録"""
+        logger.info('商品登録を開始 - ユーザー: %s', request.user.username)
 
-        if not url:
-            logger.warning('URLが指定されていません - ユーザー: %s', request.user.username)
-            return Response({"detail": "URLが指定されていません。"}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ProductRegistrationSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning('商品登録の入力値エラー - ユーザー: %s, エラー: %s', 
+                         request.user.username, serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # URLの形式チェック
-        validator = URLValidator()
         try:
-            validator(url)
-        except ValidationError:
-            logger.warning('不正なURL形式です - URL: %s, ユーザー: %s', url, request.user.username)
-            return Response({"detail": "URLの形式が正しくありません。"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
+            # データ取得
+            validated_data = serializer.validated_data
+            url = validated_data.get('url')
+            jan_code = validated_data.get('jan_code')
+            price_threshold = validated_data.get('price_threshold')
+
             service = ProductService()
             result = service.register_product_from_url(
                 user_id=request.user.id,
                 url=url,
+                jan_code=jan_code,
                 price_threshold=price_threshold
             )
 
-            serializer = UserProductSerializer(result['user_product'])
-            logger.info('商品登録が完了しました - 商品: %s, ユーザー: %s', 
-                       result['product'].name, request.user.username)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            user_product_serializer = UserProductSerializer(result['user_product'])
+            logger.info('商品登録が完了しました - 商品: %s..., ユーザー: %s', 
+                       result['product'].name[:20], request.user.username)
+            return Response(user_product_serializer.data, status=status.HTTP_201_CREATED)
         
         except ValueError as e:
             logger.warning('商品登録の入力値エラー - URL: %s, ユーザー: %s, エラー: %s', 
