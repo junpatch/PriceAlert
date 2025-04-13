@@ -21,6 +21,8 @@ const baseQueryWithReauth: BaseQueryFn<
   // 基本のfetchBaseQueryを設定
   const baseQuery = fetchBaseQuery({
     baseUrl: `${import.meta.env.VITE_DJANGO_API_URL}/api/v1`,
+    // クレデンシャル（Cookie）を含める設定を追加
+    credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
       // まずReduxストアからトークンを取得
       const token = (getState() as RootState).auth.token;
@@ -41,6 +43,10 @@ const baseQueryWithReauth: BaseQueryFn<
           console.warn('認証トークンが見つかりません');
         }
       }
+      
+      // 基本的なヘッダー設定
+      headers.set('Content-Type', 'application/json');
+      headers.set('Accept', 'application/json');
       
       return headers;
     },

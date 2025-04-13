@@ -24,7 +24,20 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('プロキシエラー', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('プロキシリクエスト:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('プロキシレスポンス:', req.method, req.url, proxyRes.statusCode);
+          });
+        },
       },
     },
+    host: true,
+    cors: true,
   },
 }); 

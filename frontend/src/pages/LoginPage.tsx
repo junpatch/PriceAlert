@@ -10,13 +10,15 @@ import {
   Alert,
   Grid,
 } from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@features/auth/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ErrorAlert from "@components/common/ErrorAlert";
 import { toast } from "react-toastify";
+import { setError } from "@features/auth/slices/authSlice";
+import { useAppDispatch } from "@hooks/index";
 
 interface LoginFormData {
   email: string;
@@ -35,12 +37,22 @@ const schema = yup.object().shape({
 });
 
 const LoginPage: React.FC = () => {
-  const { login, loading, error } = useAuth();
+  const { login, loading, error, isAuthenticated } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   // ロケーション情報を取得して、セッション切れの場合にメッセージを表示
   const location = useLocation();
   const { state } = location;
+
+  // ページ遷移時にエラー状態をクリア
+  useEffect(() => {
+    return () => {
+      // コンポーネントのアンマウント時にエラーをクリア
+      dispatch(setError(null));
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     // セッション切れのフラグがあればトースト通知を表示
@@ -55,6 +67,13 @@ const LoginPage: React.FC = () => {
     }
   }, [state]);
 
+  // 認証状態が変わったときに成功メッセージを表示
+  useEffect(() => {
+    if (isAuthenticated) {
+      setSuccessMessage("ログインに成功しました。リダイレクトします...");
+    }
+  }, [isAuthenticated]);
+
   const {
     register,
     handleSubmit,
@@ -65,11 +84,15 @@ const LoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     setSuccessMessage(null);
+    // エラーが出る可能性があるため、前回のエラーをクリア
+    dispatch(setError(null));
+
     try {
       await login(data.email, data.password);
-      setSuccessMessage("ログインに成功しました。リダイレクトします...");
+      // 成功メッセージはisAuthenticatedの変更を検知して表示するよう変更
     } catch (err) {
       // エラーはuseAuthフックで処理されるので、ここでは何もしない
+      setSuccessMessage(null);
     }
   };
 
@@ -89,7 +112,7 @@ const LoginPage: React.FC = () => {
           ログイン
         </Typography>
 
-        {successMessage && (
+        {successMessage && !error && (
           <Alert severity="success" sx={{ width: "100%", mb: 2 }}>
             {successMessage}
           </Alert>
@@ -145,7 +168,11 @@ const LoginPage: React.FC = () => {
               </Link>
             </Grid>
             <Grid item>
-              <Link to="/register" style={{ textDecoration: "none" }}>
+              <Link
+                to="/register"
+                style={{ textDecoration: "none" }}
+                onClick={() => dispatch(setError(null))}
+              >
                 アカウントをお持ちでない方はこちら
               </Link>
             </Grid>

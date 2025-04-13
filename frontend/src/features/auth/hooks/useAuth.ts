@@ -57,9 +57,23 @@ export const useAuth = () => {
       }, 500);
       
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error('ログイン失敗:', err);
-      const errorMessage = err instanceof Error ? err.message : '認証に失敗しました';
+      
+      // より詳細なエラー情報を表示
+      let errorMessage = 'ログインに失敗しました';
+      
+      // FetchErrorなど具体的なエラー情報がある場合
+      if (err.status === 'FETCH_ERROR') {
+        errorMessage = 'サーバーに接続できませんでした。ネットワーク接続を確認してください。';
+      } else if (err.status === 401) {
+        errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+      } else if (err.data && err.data.detail) {
+        errorMessage = err.data.detail;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       dispatch(setError(errorMessage));
     }
   };
