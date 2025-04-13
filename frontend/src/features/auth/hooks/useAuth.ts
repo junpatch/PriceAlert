@@ -101,7 +101,7 @@ export const useAuth = () => {
     if (!token && !storedToken) {
       console.warn('トークンが見つからないため、クライアント側のみでログアウトします');
       dispatch(logout());
-      navigate('/login');
+      navigate('/login', { state: { isIntentionalLogout: true } });
       return;
     }
     
@@ -114,7 +114,7 @@ export const useAuth = () => {
     } finally {
       // Reduxストアとローカルストレージからトークンをクリア
       dispatch(logout());
-      navigate('/login');
+      navigate('/login', { state: { isIntentionalLogout: true } });
     }
   };
 

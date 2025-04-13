@@ -4,12 +4,13 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework import serializers
 from .models import Product, UserProduct, ProductOnECSite, ECSite
-from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer
+from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, ProductSearchSerializer
 from rest_framework import viewsets
 from django.shortcuts import get_object_or_404
 from .services import ProductService
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
+from rest_framework.decorators import action
 # Create your views here.
 
 logger = logging.getLogger('products.views')
@@ -104,49 +105,96 @@ class UserProductViewSet(viewsets.ViewSet):
             return Response({"detail": "予期せぬエラーが発生しました"}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    # POST: user-products/
-    def create(self, request):
-        """URLかJANコードからログインユーザーの商品を登録"""
-        logger.info('商品登録を開始 - ユーザー: %s', request.user.username)
+    # # POST: user-products/
+    # def create_dummy(self, request):
+    #     """URLかJANコードからログインユーザーの商品を登録"""
+    #     logger.info('商品登録を開始 - ユーザー: %s', request.user.username)
 
-        serializer = ProductRegistrationSerializer(data=request.data)
+    #     serializer = ProductRegistrationSerializer(data=request.data)
+    #     if not serializer.is_valid():
+    #         logger.warning('商品登録の入力値エラー - ユーザー: %s, エラー: %s', 
+    #                      request.user.username, serializer.errors)
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    #     try:
+    #         # データ取得
+    #         validated_data = serializer.validated_data
+    #         url = validated_data.get('url')
+    #         jan_code = validated_data.get('jan_code')
+    #         price_threshold = validated_data.get('price_threshold')
+
+    #         service = ProductService()
+    #         result = service.register_product_from_url(
+    #             user_id=request.user.id,
+    #             url=url,
+    #             jan_code=jan_code,
+    #             price_threshold=price_threshold
+    #         )
+
+    #         user_product_serializer = UserProductSerializer(result['user_product'])
+    #         logger.info('商品登録が完了しました - 商品: %s..., ユーザー: %s', 
+    #                    result['product'].name[:20], request.user.username)
+    #         return Response(user_product_serializer.data, status=status.HTTP_201_CREATED)
+        
+    #     except ValueError as e:
+    #         logger.warning('商品登録の入力値エラー - URL: %s, ユーザー: %s, エラー: %s', 
+    #                      url, request.user.username, str(e))
+    #         return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    #     except ConnectionError as e:
+    #         logger.error('外部サービス接続エラー - URL: %s, ユーザー: %s, エラー: %s', 
+    #                     url, request.user.username, str(e))
+    #         return Response({"detail": "外部サービスとの接続に失敗しました"}, 
+    #                       status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    #     except Exception as e:
+    #         logger.error('商品登録中に予期せぬエラーが発生しました - URL: %s, ユーザー: %s, エラー: %s', 
+    #                     url, request.user.username, str(e), exc_info=True)
+    #         return Response({"detail": "予期せぬエラーが発生しました"}, 
+    #                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    # @action(detail=False, methods=['get'])
+    def create(self, request):
+        """URLまたはJANコードから商品を登録"""
+        logger.info('商品登録を開始 - ユーザー: %s', request.user.username)
+        
+        # クエリパラメータを取得
+        url = request.data.get('url')
+        jan_code = request.data.get('jan_code')
+        price_threshold = request.data.get('price_threshold')
+        # パラメータバリデーション
+        serializer = ProductRegistrationSerializer(data={'url': url, 'jan_code': jan_code, 'price_threshold': price_threshold})
         if not serializer.is_valid():
-            logger.warning('商品登録の入力値エラー - ユーザー: %s, エラー: %s', 
+            logger.warning('クエリのバリデーションエラー - ユーザー: %s, エラー: %s', 
                          request.user.username, serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        
         try:
-            # データ取得
-            validated_data = serializer.validated_data
-            url = validated_data.get('url')
-            jan_code = validated_data.get('jan_code')
-            price_threshold = validated_data.get('price_threshold')
-
+            # サービス層に処理を委譲
             service = ProductService()
-            result = service.register_product_from_url(
+            products = service.search_products(
                 user_id=request.user.id,
                 url=url,
                 jan_code=jan_code,
                 price_threshold=price_threshold
             )
-
-            user_product_serializer = UserProductSerializer(result['user_product'])
-            logger.info('商品登録が完了しました - 商品: %s..., ユーザー: %s', 
-                       result['product'].name[:20], request.user.username)
-            return Response(user_product_serializer.data, status=status.HTTP_201_CREATED)
-        
+            
+            # 検索結果をシリアライズして返却
+            serializer = ProductSerializer(products, many=True)
+            logger.info('商品登録が完了しました - 結果件数: %d, ユーザー: %s', 
+                       len(products), request.user.username)
+            return Response(serializer.data)
+            
         except ValueError as e:
-            logger.warning('商品登録の入力値エラー - URL: %s, ユーザー: %s, エラー: %s', 
-                         url, request.user.username, str(e))
+            logger.warning('商品検索の入力値エラー - ユーザー: %s, エラー: %s', 
+                         request.user.username, str(e))
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except ConnectionError as e:
-            logger.error('外部サービス接続エラー - URL: %s, ユーザー: %s, エラー: %s', 
-                        url, request.user.username, str(e))
+            logger.error('外部サービス接続エラー - ユーザー: %s, エラー: %s', 
+                        request.user.username, str(e))
             return Response({"detail": "外部サービスとの接続に失敗しました"}, 
                           status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
-            logger.error('商品登録中に予期せぬエラーが発生しました - URL: %s, ユーザー: %s, エラー: %s', 
-                        url, request.user.username, str(e), exc_info=True)
+            logger.error('商品検索中に予期せぬエラーが発生しました - ユーザー: %s, エラー: %s', 
+                        request.user.username, str(e), exc_info=True)
             return Response({"detail": "予期せぬエラーが発生しました"}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -267,4 +315,4 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
             logger.warning('未登録の商品に対するECサイト情報作成の試み - 商品ID: %s, ユーザー: %s', 
                          product_id, self.request.user.username) # type: ignore
             raise serializers.ValidationError("この商品は登録されていません。")
-        
+    

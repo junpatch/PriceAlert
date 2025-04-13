@@ -13,24 +13,26 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Button,
   TextField,
   Switch,
   FormControlLabel,
   Chip,
-  Divider,
   IconButton,
+  Link,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   ShoppingCart as ShoppingCartIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import PageContainer from "@components/layout/PageContainer";
 import PriceHistoryChart from "@components/products/PriceHistoryChart";
 import LoadingSpinner from "@components/common/LoadingSpinner";
 import ErrorAlert from "@components/common/ErrorAlert";
+import ECSiteLogo from "@components/ec-sites/ECSiteLogo";
 import { useProducts } from "@features/products/hooks/useProducts";
 import { useGetProductByIdQuery, useGetPriceHistoryQuery } from "@services/api";
 import { ProductOnECSite } from "@/types/ecSite";
@@ -62,6 +64,7 @@ const ProductDetailPage: React.FC = () => {
   const [memo, setMemo] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const loading = isProductLoading || isPriceHistoryLoading;
   const rawError = productsError || productError;
@@ -148,6 +151,37 @@ const ProductDetailPage: React.FC = () => {
 
   const bestSite = getBestEcSite();
 
+  // ECサイトのリストを価格の安い順に並べ替える
+  const sortedEcSites = product.ec_sites
+    ? [...product.ec_sites].sort((a, b) => {
+        // 価格情報がない場合は最後に表示
+        if (!a.current_price) return 1;
+        if (!b.current_price) return -1;
+
+        // 文字列または数値からNumber型に変換して比較
+        const priceA = parseFloat(a.current_price.toString());
+        const priceB = parseFloat(b.current_price.toString());
+
+        return priceA - priceB;
+      })
+    : [];
+
+  // 商品説明を短く切り詰める文字数
+  const MAX_DESCRIPTION_LENGTH = 150;
+  const isDescriptionLong =
+    product.description && product.description.length > MAX_DESCRIPTION_LENGTH;
+
+  // 表示する説明文
+  const displayDescription =
+    product.description && isDescriptionLong && !descriptionExpanded
+      ? `${product.description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
+      : product.description;
+
+  // 説明文の折りたたみ状態を切り替える
+  const toggleDescription = () => {
+    setDescriptionExpanded(!descriptionExpanded);
+  };
+
   return (
     <PageContainer title={product.name} maxWidth="lg">
       <Box sx={{ mb: 2 }}>
@@ -200,28 +234,43 @@ const ProductDetailPage: React.FC = () => {
               )}
 
               {product.description && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 2 }}
-                >
-                  {product.description}
-                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {displayDescription}
+                  </Typography>
+
+                  {isDescriptionLong && (
+                    <Button
+                      size="small"
+                      onClick={toggleDescription}
+                      endIcon={
+                        descriptionExpanded ? (
+                          <ExpandLessIcon />
+                        ) : (
+                          <ExpandMoreIcon />
+                        )
+                      }
+                      sx={{ mt: 1 }}
+                    >
+                      {descriptionExpanded ? "閉じる" : "続きを読む"}
+                    </Button>
+                  )}
+                </Box>
               )}
 
-              {bestSite && bestSite.affiliate_url && (
+              {bestSite && bestSite.product_url && (
                 <Button
                   variant="contained"
                   color="primary"
                   endIcon={<ShoppingCartIcon />}
                   component="a"
-                  href={bestSite.affiliate_url}
+                  href={bestSite.affiliate_url || bestSite.product_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   fullWidth
                   sx={{ mt: 2 }}
                 >
-                  {bestSite.ec_site?.name || "ECサイト"}で購入
+                  最安値で購入
                 </Button>
               )}
             </CardContent>
@@ -322,84 +371,128 @@ const ProductDetailPage: React.FC = () => {
                 各ECサイトの価格情報
               </Typography>
 
-              {product.ec_sites && product.ec_sites.length > 0 ? (
+              {sortedEcSites.length > 0 ? (
                 <TableContainer>
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell>ECサイト</TableCell>
+                        <TableCell>販売店</TableCell>
                         <TableCell align="right">価格</TableCell>
                         <TableCell align="right">ポイント</TableCell>
                         <TableCell align="right">実質価格</TableCell>
-                        <TableCell align="right">最終更新日</TableCell>
-                        <TableCell></TableCell>
+                        <TableCell align="right">送料</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {product.ec_sites.map((site) => (
-                        <TableRow
-                          key={site.id}
-                          sx={{
-                            backgroundColor:
-                              site === bestSite
-                                ? "rgba(76, 175, 80, 0.08)"
-                                : "inherit",
-                          }}
-                        >
-                          <TableCell>
-                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                              {site.ec_site?.name || "ECサイト"}
-                              {site === bestSite && (
-                                <Chip
-                                  label="最安値"
-                                  size="small"
-                                  color="success"
-                                  sx={{ ml: 1 }}
-                                />
-                              )}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">
-                            {site.current_price
-                              ? `¥${Number(
-                                  site.current_price
-                                ).toLocaleString()}`
-                              : "情報なし"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {site.current_points
-                              ? `${Number(
-                                  site.current_points
-                                ).toLocaleString()}ポイント`
-                              : "-"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {site.effective_price
-                              ? `¥${Number(
-                                  site.effective_price
-                                ).toLocaleString()}`
-                              : "情報なし"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {site.last_updated
-                              ? new Date(site.last_updated).toLocaleDateString()
-                              : "-"}
-                          </TableCell>
-                          <TableCell>
-                            {site.product_url && (
-                              <IconButton
-                                component="a"
-                                href={site.affiliate_url || site.product_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                size="small"
+                      {sortedEcSites.map((site) => {
+                        // サイトへのリンク
+                        const siteUrl = site.affiliate_url || site.product_url;
+
+                        return (
+                          <TableRow
+                            key={site.id}
+                            hover
+                            onClick={() => {
+                              if (siteUrl) {
+                                window.open(
+                                  siteUrl,
+                                  "_blank",
+                                  "noopener,noreferrer"
+                                );
+                              }
+                            }}
+                            sx={{
+                              backgroundColor:
+                                site === bestSite
+                                  ? "rgba(76, 175, 80, 0.08)"
+                                  : "inherit",
+                              cursor: siteUrl ? "pointer" : "default",
+                              "&:hover": {
+                                backgroundColor:
+                                  site === bestSite
+                                    ? "rgba(76, 175, 80, 0.15)"
+                                    : "rgba(0, 0, 0, 0.04)",
+                              },
+                            }}
+                          >
+                            <TableCell>
+                              <Box
+                                sx={{ display: "flex", alignItems: "center" }}
                               >
-                                <ShoppingCartIcon fontSize="small" />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                <ECSiteLogo
+                                  ecSiteCode={site.ec_site?.code}
+                                  ecSiteName={site.ec_site?.name || "ECサイト"}
+                                />
+                                {siteUrl ? (
+                                  <Link
+                                    href={siteUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    underline="hover"
+                                  >
+                                    {site.seller_name ||
+                                      site.ec_site?.name ||
+                                      "ECサイト"}
+                                  </Link>
+                                ) : (
+                                  <Typography>
+                                    {site.seller_name ||
+                                      site.ec_site?.name ||
+                                      "ECサイト"}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "flex-end",
+                                }}
+                              >
+                                {site.current_price
+                                  ? `¥${Number(
+                                      site.current_price
+                                    ).toLocaleString()}`
+                                  : "情報なし"}
+                                {site === bestSite && (
+                                  <Chip
+                                    label="最安値"
+                                    size="small"
+                                    color="success"
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">
+                              {site.current_points
+                                ? `${Number(
+                                    site.current_points
+                                  ).toLocaleString()}P`
+                                : "-"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {site.effective_price
+                                ? `¥${Number(
+                                    site.effective_price
+                                  ).toLocaleString()}`
+                                : "情報なし"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {site.shipping_fee !== null
+                                ? site.shipping_fee > 0
+                                  ? `¥${Number(
+                                      site.shipping_fee
+                                    ).toLocaleString()}`
+                                  : "無料"
+                                : "-"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>

@@ -11,7 +11,7 @@ class ProductOnECSiteSerializer(serializers.ModelSerializer):
     ec_site = ECSiteSerializer(read_only=True)
     class Meta:
         model = ProductOnECSite
-        fields = ['id', 'ec_site', 'current_price', 'effective_price', 'product_url', 'affiliate_url', 'last_updated']
+        fields = ['id', 'ec_site', 'current_price', 'effective_price', 'product_url', 'affiliate_url', 'seller_name', 'shipping_fee', 'condition', 'last_updated']
 
 class ProductSerializer(serializers.ModelSerializer):
     ec_sites = ProductOnECSiteSerializer(source='productonecsite_set', many=True, read_only=True)
@@ -28,14 +28,20 @@ class UserProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'product',  'price_threshold', 'threshold_type', 'threshold_percentage', 'notification_enabled', 'display_order', 'memo', 'created_at', 'updated_at']
         read_only_fields = ['user']
 
-class ProductRegistrationSerializer(serializers.Serializer):
-    """商品登録用のシリアライザ"""
-    url = serializers.URLField(required=False)
-    jan_code = serializers.RegexField(r'^\d{13}$', required=False)
-    price_threshold = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+class BaseProductSerializer(serializers.Serializer):
+    """URLまたはJANコードのいずれかを使う共通シリアライザ"""
+    url = serializers.URLField(required=False, allow_null=True)
+    jan_code = serializers.RegexField(r'^\d{13}$', required=False, allow_null=True)
 
     def validate(self, data):
-        """URLまたはJANコードのいずれかが必要"""
         if not data.get('url') and not data.get('jan_code'):
             raise serializers.ValidationError("URLまたはJANコードのいずれかを指定してください。")
         return data
+
+class ProductSearchSerializer(BaseProductSerializer):
+    """商品検索用（追加項目なし）"""
+    pass
+
+class ProductRegistrationSerializer(BaseProductSerializer):
+    """商品登録用（価格しきい値あり）"""
+    price_threshold = serializers.IntegerField(required=False, allow_null=True)

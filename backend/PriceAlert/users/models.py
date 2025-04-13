@@ -1,9 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
+from typing import Any, Dict, Optional, Union, Type, TypeVar, cast
+
+T = TypeVar('T', bound='User')
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, username, password=None, **extra_fields):
+    def create_user(self, email: str, username: str, password: Optional[str] = None, **extra_fields: Any) -> 'User':
         """
         通常ユーザーを作成する
         """
@@ -14,9 +17,9 @@ class UserManager(BaseUserManager):
         user = self.model(email=email, username=username, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
-        return user
+        return cast('User', user)
     
-    def create_superuser(self, email, username, password=None, **extra_fields):
+    def create_superuser(self, email: str, username: str, password: Optional[str] = None, **extra_fields: Any) -> 'User':
         """
         スーパーユーザーを作成する
         """
@@ -56,7 +59,7 @@ class PasswordResetToken(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         """トークンが有効かどうかを検証"""
         return not self.is_used and self.expires_at > timezone.now()
         

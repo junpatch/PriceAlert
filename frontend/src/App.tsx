@@ -67,10 +67,17 @@ const ProtectedRoute: React.FC = () => {
   // セッション切れでログインページに戻される場合、state経由でメッセージを渡す
   if (!isAuthenticated) {
     // ログインページ以外からのリダイレクトであれば、元のパスを保存
+    // ただし、意図的なログアウトの場合はsessionExpiredフラグを設定しない
+    const isIntentionalLogout = location.state?.isIntentionalLogout;
+    const isPageReload = !location.state && location.pathname !== "/login";
+
     return (
       <Navigate
         to="/login"
-        state={{ from: location.pathname, sessionExpired: true }}
+        state={{
+          from: location.pathname,
+          sessionExpired: !isIntentionalLogout && !isPageReload,
+        }}
         replace
       />
     );

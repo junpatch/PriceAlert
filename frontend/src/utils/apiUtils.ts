@@ -3,7 +3,6 @@
  */
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { SerializedError } from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
 import { logout } from '@features/auth/slices/authSlice';
 import { store } from '@store/index';
 
@@ -35,11 +34,6 @@ export const getErrorMessage = (error: FetchBaseQueryError | SerializedError | u
 
   // FetchBaseQueryErrorの場合
   if (isFetchBaseQueryError(error)) {
-    // 認証エラーの場合
-    if (error.status === 401) {
-      return 'セッションの有効期限が切れました。再度ログインしてください。';
-    }
-    
     // サーバーからのエラーメッセージがある場合
     const errorData = error.data as any;
     if (errorData?.detail) {
@@ -53,6 +47,7 @@ export const getErrorMessage = (error: FetchBaseQueryError | SerializedError | u
     if (typeof error.status === 'number') {
       switch (error.status) {
         case 400: return 'リクエストが不正です。';
+        case 401: return 'セッションの有効期限が切れました。再度ログインしてください。';
         case 403: return 'アクセス権限がありません。';
         case 404: return 'リソースが見つかりません。';
         case 429: return 'リクエスト回数が制限を超えています。しばらく時間をおいてください。';
@@ -74,20 +69,14 @@ export const getErrorMessage = (error: FetchBaseQueryError | SerializedError | u
 
 /**
  * 認証エラー（401）を処理する
- * @returns 認証エラーならtrue、それ以外ならfalse
  */
-export const handleAuthError = (error: any): boolean => {
+export const handleAuthError = (error: any): void => {
   if (isFetchBaseQueryError(error) && error.status === 401) {
-    // 401エラーを処理
-    toast.error('セッションの有効期限が切れました。再度ログインしてください。');
-    
     // ログアウト処理を実行
     store.dispatch(logout());
     
     // ログインページへのリダイレクトはApp.tsxのProtectedRouteコンポーネントが処理
-    return true;
   }
-  return false;
 };
 
 // APIエラーを文字列に変換するヘルパー関数

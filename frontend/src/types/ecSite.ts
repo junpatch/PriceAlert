@@ -25,11 +25,14 @@ export interface ProductOnECSite {
   ec_site_id: number;
   product_id: number;
   ec_product_id: string;
+  seller_name?: string;
   product_url: string;
   affiliate_url?: string;
   current_price: number | null;
   current_points: number | null;
+  shipping_fee: number | null;
   effective_price: number | null;
+  condition?: string;
   last_updated: string | null;
   is_active: boolean;
   created_at: string;

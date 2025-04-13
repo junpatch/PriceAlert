@@ -18,7 +18,7 @@ import {
   Notifications as NotificationsIcon,
   NotificationsOff as NotificationsOffIcon,
 } from "@mui/icons-material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { UserProduct, ProductOnECSite } from "../../types";
 
 interface ProductCardProps {
@@ -33,6 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onToggleNotification,
 }) => {
   const { id, product, notification_enabled } = userProduct;
+  const navigate = useNavigate();
 
   if (!product) return null;
 
@@ -82,8 +83,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
     console.log("ProductCard - 最安値サイト:", bestSite);
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // アイコンボタンやリンクがクリックされた場合は、デフォルトの動作を優先
+    if (
+      e.target instanceof HTMLButtonElement ||
+      e.target instanceof SVGElement ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest("a")
+    ) {
+      return;
+    }
+    navigate(`/products/${id}`);
+  };
+
   return (
-    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        cursor: "pointer",
+      }}
+      onClick={handleCardClick}
+    >
       <CardMedia
         component="img"
         sx={{
@@ -165,7 +187,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
             title={notification_enabled ? "通知を無効化" : "通知を有効化"}
           >
             <IconButton
-              onClick={() => onToggleNotification(id, !notification_enabled)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleNotification(id, !notification_enabled);
+              }}
               aria-label={
                 notification_enabled ? "通知を無効化" : "通知を有効化"
               }
@@ -182,7 +207,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
           <Tooltip title="削除">
             <IconButton
-              onClick={() => onDelete(id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(id);
+              }}
               aria-label="削除"
               color="error"
               size="small"
@@ -192,16 +220,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </Tooltip>
         </Box>
 
-        {bestSite && bestSite.affiliate_url && (
+        {bestSite && bestSite.product_url && (
           <Button
             size="small"
             variant="contained"
             color="primary"
             endIcon={<ShoppingCartIcon />}
             component="a"
-            href={bestSite.affiliate_url}
+            href={bestSite.affiliate_url || bestSite.product_url}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
           >
             購入
           </Button>
