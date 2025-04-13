@@ -36,7 +36,7 @@ class ECConnectorFactory:
             product_infos = connector.search_by_url(url)
 
             if not product_infos:
-                raise ValueError(f"検索結果が見つかりませんでした - URL: {url}")
+                raise ValueError(f"検索結果が見つかりませんでした")
             
             logger.info('URL検索が完了しました - URL: %s..., 結果件数: %d', 
                         url[:30], len(product_infos))

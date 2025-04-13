@@ -17,12 +17,6 @@ class RakutenConnector(ECConnector):
 
         self.request_url = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601"
 
-        self.params = {
-            "applicationId": self.api_key,
-            # "affiliateId": self.affiliate_id,　# アフィリエイトIDは開発中は不要
-            
-        }
-
     def search_by_url(self, url: str) -> List[Dict[str, Any]]:
         """URLから商品を検索する"""
         logger.debug('楽天: URL検索を開始 - URL: %s', url)
@@ -34,13 +28,16 @@ class RakutenConnector(ECConnector):
                 logger.warning('楽天: URLから商品コードが見つかりませんでした - URL: %s', url)
                 return []
 
-            # JANコードで検索
+            # 商品コードと店舗コードで検索
             response = self._search_item(keyword=f"{item_code} {shop_code}")
             
             # 検索結果を整形
-            product_info = self._format_product_info(response["Items"][0]["Item"])
+            result: List[Dict[str, Any]] = []
+            for item_info in response["Items"]:
+                product_info = self._format_product_info(item_info["Item"])
+                result.append(product_info)
             
-            return [product_info]
+            return result
             
         except Exception as e:
             logger.error('楽天: URL検索中に予期せぬエラーが発生しました - URL: %s, エラー: %s', 
