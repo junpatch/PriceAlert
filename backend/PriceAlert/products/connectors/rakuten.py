@@ -1,50 +1,59 @@
-from .base import ECConnector
+from .base import ECConnector, ProductData
 from django.conf import settings
 import requests
 import re
 import logging
-from typing import List, Dict, Any, Optional, Union, Tuple, cast
+from typing import List, Dict, Any, Optional, Union, Tuple, cast, Set
 
 logger = logging.getLogger(__name__)
 
 class RakutenConnector(ECConnector):
+    """楽天市場用コネクタ"""
 
     def __init__(self):
-        self.ec_site = "rakuten"
+        super().__init__(ec_site_code="rakuten")
         self.api_key = settings.RAKUTEN_API_KEY
         self.api_secret = settings.RAKUTEN_API_SECRET
         self.affiliate_id = settings.RAKUTEN_AFFILIATE_ID
-
         self.request_url = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601"
 
-    def search_by_url(self, url: str) -> List[Dict[str, Any]]:
+    def search_by_url(self, url: str) -> Set[str]:
         """URLから商品を検索する"""
         logger.debug('楽天: URL検索を開始 - URL: %s', url)
         
         try:
             # URLから商品コードと店舗コードを抽出
-            shop_code, item_code = self.extract_item_code_and_shop_code(url)
+            shop_code, item_code = self._extract_item_code_and_shop_code(url)
             if not shop_code or not item_code:
                 logger.warning('楽天: URLから商品コードが見つかりませんでした - URL: %s', url)
-                return []
+                return set()
 
             # 商品コードと店舗コードで検索
             response = self._search_item(keyword=f"{item_code} {shop_code}")
             
-            # 検索結果を整形
-            result: List[Dict[str, Any]] = []
-            for item_info in response["Items"]:
-                product_info = self._format_product_info(item_info["Item"])
-                result.append(product_info)
+            # 検索結果がない場合
+            if not response or response.get("count", 0) == 0:
+                # 商品コードのみで検索
+                response = self._search_item(keyword=f"{item_code}")
+                if not response or response.get("count", 0) == 0:
+                    # それでもない場合は商品が見つからない
+                    logger.warning('楽天: URLから商品が見つかりませんでした - URL: %s', url)
+                    return set()
             
-            return result
+            all_jan_codes: Set[str] = set()
+            for item_info in response.get("Items", []):
+                jan_codes = self._find_jan_codes(item_info)
+                all_jan_codes.update(jan_codes)
+            logger.info(f'楽天: {len(all_jan_codes)}件のJANコードが見つかりました: {all_jan_codes}')
+
+            return all_jan_codes
             
         except Exception as e:
             logger.error('楽天: URL検索中に予期せぬエラーが発生しました - URL: %s, エラー: %s', 
                         url, str(e), exc_info=True)
-            return []
+            return set()
     
-    def search_by_jan_code(self, jan_code: str) -> List[Dict[str, Any]]:
+    def search_by_jan_code(self, jan_code: str) -> List[ProductData]:
         """JANコードから商品を検索する"""
         logger.debug('楽天: JANコード検索を開始 - JANコード: %s', jan_code)
         
@@ -53,14 +62,14 @@ class RakutenConnector(ECConnector):
             response = self._search_item(keyword=jan_code)
             
             # 検索結果から商品情報を取得
-            if not response or response.get("count") == 0:
-                logger.warning('楽天: JANコードに一致する商品が見つかりませんでした - JANコード: %s', jan_code)
+            if not response or response.get("count", 0) == 0:
+                # アイテムが見つからない：検索を続行させるためエラーハンドリングしない
                 return []
             
-            result: List[Dict[str, Any]] = []
-            for item_info in response["Items"]:
-                product_info = self._format_product_info(item_info["Item"], jan_code)
-                result.append(product_info)
+            result: List[ProductData] = []
+            for item_info in response.get("Items", []):
+                product_data = self._format_product_data(item_info.get("Item", {}), jan_code=jan_code)
+                result.append(product_data)
             
             return result
             
@@ -87,12 +96,12 @@ class RakutenConnector(ECConnector):
         
         return cast(Dict[str, Any], response.json())
     
-    def fetch_price(self, url: str) -> Dict[str, Any]:
+    def fetch_price(self, url: str) -> Optional[ProductData]:
         """商品URLから価格情報のみ取得する"""
-        # 現状は未実装
-        return {}
+        # 未実装のため、URLから商品検索して最初の結果を返す
+        return None
 
-    def extract_item_code_and_shop_code(self, url: str) -> Tuple[Optional[str], Optional[str]]:
+    def _extract_item_code_and_shop_code(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         """商品URLから商品コードと店舗コードを抽出する"""
         item_code_match = re.search(r"rakuten.co.jp/([^/]+)\/([^/?]+)", url)
         if item_code_match:
@@ -101,33 +110,33 @@ class RakutenConnector(ECConnector):
             return shop_code, item_code
         return None, None
     
-    def _format_product_info(self, item_info: Dict[str, Any], jan_code: Optional[List[str] | str] = None) -> Dict[str, Any]:
+    def _extract_product_id(self, url: str) -> Optional[str]:
+        """商品URLから商品IDを抽出する"""
+        shop_code, item_code = self._extract_item_code_and_shop_code(url)
+        return item_code
+    
+    def _format_product_data(self, item_info: Dict[str, Any], **kwargs) -> ProductData:
         """商品情報を整形する共通メソッド"""
-
-        # JANコードがない場合は商品情報から探す
-        if not jan_code:
-            jan_code = self._find_jan_codes(item_info)
-        if not isinstance(jan_code, list):
-            jan_code = [jan_code]
-
-        result = {
-            'name': self._get_nested_attr_or_key(item_info, 'itemName', ""),
-            'description': self._get_nested_attr_or_key(item_info, 'itemCaption', ""),
-            'image_url': self._get_nested_attr_or_key(item_info, 'mediumImageUrls[0].imageUrl', ""),
-            'manufacturer': self._get_nested_attr_or_key(item_info, 'shopName', ""),
-            'model_number': "",
-            'jan_code': jan_code,
-            'price': int(self._get_nested_attr_or_key(item_info, 'itemPrice', 0)),
-            'points': int(self._get_nested_attr_or_key(item_info, 'itemPoints', 0)),
-            'effective_price': int(self._get_nested_attr_or_key(item_info, 'itemPrice', 0)),
-            'shipping_fee': 0,
-            'condition': self._get_nested_attr_or_key(item_info, 'itemCondition.value', "").lower(),
-            'seller_name': self._get_nested_attr_or_key(item_info, 'shopName', ""),
-            'ec_product_id': self._get_nested_attr_or_key(item_info, 'itemCode', ""),
-            'product_url': self._get_nested_attr_or_key(item_info, 'itemUrl', ""),
+        # JANコードの処理
+        jan_code = kwargs.get('jan_code') # jan_code: str | None
+        
+        # ProductDataオブジェクト作成
+        return ProductData(
+            name=self._get_nested_attr_or_key(item_info, 'itemName', ""),
+            description=self._get_nested_attr_or_key(item_info, 'itemCaption', ""),
+            image_url=self._get_nested_attr_or_key(item_info, 'mediumImageUrls[0].imageUrl', ""),
+            manufacturer=self._get_nested_attr_or_key(item_info, 'shopName', ""),
+            model_number="",
+            jan_code=jan_code,
+            price=int(self._get_nested_attr_or_key(item_info, 'itemPrice', 0)),
+            points=int(self._get_nested_attr_or_key(item_info, 'itemPoints', 0)),
+            effective_price=int(self._get_nested_attr_or_key(item_info, 'itemPrice', 0)),
+            shipping_fee=0,
+            condition=self._get_nested_attr_or_key(item_info, 'itemCondition.value', "").lower(),
+            seller_name=self._get_nested_attr_or_key(item_info, 'shopName', ""),
+            ec_product_id=self._get_nested_attr_or_key(item_info, 'itemCode', ""),
+            product_url=self._get_nested_attr_or_key(item_info, 'itemUrl', ""),
+            affiliate_url="",
             # 'affiliate_url': self._get_nested_attr(item_info, 'affiliateUrl', ""),
-            'affiliate_url': "",
-            'ec_site': 'rakuten'
-        }
- 
-        return result
+            ec_site='rakuten'
+        )

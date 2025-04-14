@@ -1,23 +1,50 @@
-from .amazon import AmazonConnector
-from .rakuten import RakutenConnector
-from .yahoo import YahooConnector
 import logging
 from django.conf import settings
+from typing import Dict, List, Optional, Union, Any, Tuple, Type, Set
+from collections import Counter
 from ..models import ECSite
-from typing import Dict, List, Optional, Union, Any, Tuple
-from .base import ECConnector
+from .base import ECConnector, ProductData
 
 logger = logging.getLogger('products')
 
 class ECConnectorFactory:
-    def __init__(self) -> None:
-        self.connectors: Dict[str, ECConnector] = {
-            'amazon': AmazonConnector(),
-            'rakuten': RakutenConnector(),
-            'yahoo': YahooConnector(),
-        }
+    """ECサイトコネクタのファクトリークラス"""
 
-    def search_by_url(self, url: str, ec_site_code: Optional[str] = None) -> List[Dict[str, Any]]:
+    def __init__(self) -> None:
+        """
+        コネクター初期化
+        各コネクタはここでインポートして遅延初期化
+        """
+        self._connectors: Dict[str, ECConnector] = {}
+        self._connector_classes: Dict[str, Type[ECConnector]] = {}
+        self._site_urls_patterns = {
+            'amazon': ['amazon.co.jp'],
+            'rakuten': ['rakuten.co.jp'],
+            'yahoo': ['shopping.yahoo.co.jp', 'store.shopping.yahoo.co.jp'],
+        }
+        
+    def _get_connector(self, ec_site_code: str) -> ECConnector:
+        """ECサイトコードに対応するコネクターを取得（遅延初期化）"""
+        if ec_site_code not in self._connectors:
+            # 必要なタイミングで遅延ロード
+            if ec_site_code == 'amazon':
+                from .amazon import AmazonConnector
+                self._connectors[ec_site_code] = AmazonConnector()
+            elif ec_site_code == 'rakuten':
+                from .rakuten import RakutenConnector
+                self._connectors[ec_site_code] = RakutenConnector()
+            elif ec_site_code == 'yahoo':
+                from .yahoo import YahooConnector
+                self._connectors[ec_site_code] = YahooConnector()
+            else:
+                logger.error('未対応のコネクターが要求されました: %s', ec_site_code)
+                raise ValueError(f"{ec_site_code}のコネクターはサポートされていません")
+                
+        logger.debug('コネクターを取得しました - ECサイト: %s, コネクター: %s', 
+                    ec_site_code, self._connectors[ec_site_code].__class__.__name__)
+        return self._connectors[ec_site_code]
+
+    def search_by_url(self, url: str, ec_site_code: Optional[str] = None) -> Set[str]:
         """URLから商品を検索"""
         logger.debug('URL検索を開始します - URL: %s', url)
         
@@ -33,43 +60,40 @@ class ECConnectorFactory:
             connector = self._get_connector(ec_site_code)
             
             # 検索実行
-            product_infos = connector.search_by_url(url)
-
-            if not product_infos:
-                raise ValueError(f"検索結果が見つかりませんでした")
+            jan_codes = connector.search_by_url(url)
+            if not jan_codes or len(jan_codes) == 0:
+                raise ValueError(f"URL検索でJANコードが見つかりませんでした")
             
-            logger.info('URL検索が完了しました - URL: %s..., 結果件数: %d', 
-                        url[:30], len(product_infos))
-            return product_infos
+            return jan_codes
             
         except Exception as e:
             logger.error('URL検索中にエラーが発生しました - URL: %s, エラー: %s', 
                         url, str(e), exc_info=True)
             raise
     
-    def search_by_jan_code(self, jan_code: str, exclude_ec_sites: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def search_by_jan_code(self, jan_code: str) -> List[Dict[str, Any]]:
         """JANコードから商品を検索"""
         logger.debug('JANコード検索を開始します - JANコード: %s', jan_code)
-        # exclude_ec_sites = exclude_ec_sites or []
         
         try:
             all_product_infos: List[Dict[str, Any]] = []
             
             # 各ECサイトで検索
-            for ec_site_code, connector in self.connectors.items():
-                # if ec_site_code in exclude_ec_sites:
-                #     logger.debug('ECサイトは検索対象から除外されています - ECサイト: %s', ec_site_code)
-                #     continue
+            for ec_site_code in self._site_urls_patterns.keys():
                     
                 try:
                     # ECサイト登録確認
                     self._create_ECSite(ec_site_code)
                     
-                    # 検索実行
-                    product_infos = connector.search_by_jan_code(jan_code)
+                    # コネクター取得
+                    connector = self._get_connector(ec_site_code)
                     
-                    # 結果がある場合のみマージ
-                    if product_infos:
+                    # 検索実行
+                    product_data_list = connector.search_by_jan_code(jan_code)
+                    
+                    # 結果がある場合のみマージ (dictに変換)
+                    if product_data_list:
+                        product_infos = [data.to_dict() for data in product_data_list]
                         all_product_infos.extend(product_infos)
                         
                 except Exception as e:
@@ -77,9 +101,13 @@ class ECConnectorFactory:
                     logger.warning(
                         'ECサイト個別の検索でエラーが発生しました - JANコード: %s, ECサイト: %s, エラー: %s', 
                         jan_code, ec_site_code, str(e))
-            
-            logger.info('JANコード検索が完了しました - JANコード: %s, 結果件数: %d', 
-                        jan_code, len(all_product_infos))
+            site_counts = Counter(dict['ec_site'] for dict in all_product_infos if dict.get('ec_site') in {'amazon', 'rakuten', 'yahoo'})
+            logger.info(    
+                f"JANコード検索が完了しました - JANコード: {jan_code}, - 結果件数: "
+                f"Amazon {site_counts.get('amazon', 0)}件 "
+                f"楽天 {site_counts.get('rakuten', 0)}件 "
+                f"Yahoo {site_counts.get('yahoo', 0)}件"
+            )
             return all_product_infos
             
         except Exception as e:
@@ -89,15 +117,11 @@ class ECConnectorFactory:
 
     def _identify_ec_site_from_url(self, url: str) -> str:
         """URLからECサイトを特定する"""
-        keywords = [
-            "amazon",
-            "rakuten",
-            "yahoo",
-        ]
-        for keyword in keywords:
-            if keyword in url:
-                logger.debug('ECサイトを識別しました: %s', keyword)
-                return keyword
+        for site_code, patterns in self._site_urls_patterns.items():
+            for pattern in patterns:
+                if pattern in url:
+                    logger.debug('ECサイトを識別しました: %s', site_code)
+                    return site_code
         
         logger.error('未対応のECサイトURLです: %s', url)
         raise ValueError("対応していないECサイトのURLです")
@@ -110,16 +134,6 @@ class ECConnectorFactory:
             'yahoo': 'Yahoo!ショッピング'
         }
         return site_names.get(code, code.capitalize())
-
-    def _get_connector(self, ec_site_code: str) -> ECConnector:
-        """ECサイトコードに対応するコネクターを取得"""
-        connector = self.connectors.get(ec_site_code)
-        if not connector:
-            logger.error('未対応のコネクターが要求されました: %s', ec_site_code)
-            raise ValueError(f"{ec_site_code}のコネクターはサポートされていません")
-        logger.debug('コネクターを取得しました - ECサイト: %s, コネクター: %s', 
-                    ec_site_code, connector.__class__.__name__)
-        return connector
 
     def _create_ECSite(self, ec_site_code: str) -> Tuple[ECSite, bool]:
         """ECサイト情報をDBに登録（なければ作成）"""

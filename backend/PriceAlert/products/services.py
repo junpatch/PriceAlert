@@ -23,41 +23,23 @@ class ProductService:
         try:
             # 処理結果格納用
             all_product_infos: List[Dict[str, Any]] = []
-            jan_codes: List[str] = []
-            # searched_ec_sites: Set[str] = set()
+            jan_codes: Set[str] = set()
 
             # URLが指定されている場合はURLから検索
             if url:
-                # ECサイトを特定
-                ec_site_code = self.factory._identify_ec_site_from_url(url)
-                # searched_ec_sites.add(ec_site_code)
-                
                 # URLからの検索実行
-                url_product_infos = self.factory.search_by_url(url)
-                # URL検索結果をマージ
-                all_product_infos.extend(url_product_infos)
-
-                # URLからの検索結果からJANコード取得
-                for product_info in all_product_infos:
-                    jan_from_url = product_info.get('jan_code')
-                    if jan_from_url:
-                        # リスト型のJANコードを処理
-                        if isinstance(jan_from_url, list):
-                            jan_codes = jan_from_url
-                        else:
-                            jan_codes = [str(jan_from_url)]
-                        logger.info(f'{len(jan_codes)}件のJANコードが見つかりました: {jan_codes}')
+                jan_codes = self.factory.search_by_url(url)
+            elif jan_code:
+                jan_codes = {jan_code}
             else:
-                jan_codes = jan_code if isinstance(jan_code, list) else [jan_code] if jan_code else []
-            
-            # JANコードでの検索実行（URL検索で既に取得したECサイトは除く）
+                raise ValueError('URLかJANコードが指定されていません')
+
+            # JANコードでの検索実行
             if jan_codes:
+                logger.info(f'JANコードでの検索を開始します: {jan_codes}')
                 for search_jan in jan_codes:
-                    # 全ECサイトに対してJANコード検索（既に検索したECサイトは除外）
-                    jan_product_infos = self.factory.search_by_jan_code(
-                        search_jan, 
-                        # exclude_ec_sites=list(searched_ec_sites)
-                    )
+                    # 全ECサイトに対してJANコード検索
+                    jan_product_infos = self.factory.search_by_jan_code(search_jan)
                     
                     # JANコードでの検索結果をマージ（重複を排除）
                     all_product_infos += [item for item in jan_product_infos if item not in all_product_infos]
@@ -81,11 +63,18 @@ class ProductService:
                             price_threshold: Optional[int]) -> List[Product]:
         """検索結果をDBに保存して、製品オブジェクトのリストを返す"""
         products: List[Product] = []
+        stats = {
+            'new_products': 0,
+            'existing_products': 0,
+            'new_ec_sites': 0,
+            'updated_ec_sites': 0,
+            'new_price_histories': 0
+        }
         
         with transaction.atomic():
             for product_info in product_infos:
                 # 商品の保存
-                jan_code = product_info.get('jan_code')
+                jan_code = product_info.get('jan_code') # jan_code: str | None
                 model_number = product_info.get('model_number')
                 
                 # ProductオブジェクトのID確認（既存の場合はupdate_or_create不要のため）
@@ -93,15 +82,12 @@ class ProductService:
                 
                 # JANコードで既存商品を探す
                 if jan_code:
-                    # JANコードはリスト形式の場合がある
-                    if isinstance(jan_code, list) and jan_code:
-                        existing_product = Product.objects.filter(jan_code=str(jan_code[0])).first()
-                    else:
-                        existing_product = Product.objects.filter(jan_code=str(jan_code)).first()
+                    existing_product = Product.objects.filter(jan_code=jan_code).first()
                 
                 # 既存商品がある場合は更新、なければ新規作成
                 if existing_product:
                     product = existing_product
+                    stats['existing_products'] += 1
                     # 商品情報が不足している場合は更新
                     if not product.image_url and product_info.get('image_url'):
                         product.image_url = product_info.get('image_url')
@@ -113,20 +99,23 @@ class ProductService:
                         'description': product_info.get('description'),
                         'image_url': product_info.get('image_url'),
                         'manufacturer': product_info.get('manufacturer'),
+                        'jan_code': jan_code,
                         'model_number': model_number,
                     }
                     
-                    # JANコードの処理
-                    if isinstance(jan_code, list) and jan_code:
-                        product_data['jan_code'] = str(jan_code[0])
-                    elif jan_code:
-                        product_data['jan_code'] = str(jan_code)
-                    
                     product = Product.objects.create(**product_data)
-                    logger.info('新規商品を作成しました: %s...', product.name[:20])
+                    stats['new_products'] += 1
                 
                 # ECサイト情報の保存
                 product_on_ec_site, created = self._save_ec_site_info(product_info, product)
+                if created:
+                    stats['new_ec_sites'] += 1
+                else:
+                    stats['updated_ec_sites'] += 1
+
+                # 価格履歴の保存
+                if created or product_on_ec_site.current_price != product_info.get('price'):
+                    stats['new_price_histories'] += 1
 
                 # 結果リストに追加（重複を排除）
                 if product not in products:
@@ -142,9 +131,17 @@ class ProductService:
                         'price_threshold': price_threshold
                     }
                 )
-                if created:
-                    logger.info('ユーザーと商品を関連付けました - ユーザー: %s, 商品: %s...', 
-                            user_id, product.name[:20])
+        
+        # 集計結果をログ出力
+        logger.info(
+            '商品情報の保存が完了しました - 新規商品: %d件, 既存商品: %d件, '
+            '新規ECサイト情報: %d件, 更新ECサイト情報: %d件, 新規価格履歴: %d件',
+            stats['new_products'],
+            stats['existing_products'],
+            stats['new_ec_sites'],
+            stats['updated_ec_sites'],
+            stats['new_price_histories']
+        )
                 
         return products
     
@@ -169,13 +166,6 @@ class ProductService:
             }
         )
         
-        if created:
-            logger.info('ECサイト上の商品情報を新規作成しました - ECサイト: %s, 商品: %s...', 
-                      product_info.get('ec_site'), product.name[:20])
-        else:
-            logger.debug('ECサイト上の商品情報を更新しました - ECサイト: %s, 商品: %s...', 
-                       product_info.get('ec_site'), product.name[:20])
-        
         # 価格履歴を保存
         try:
             if created or product_on_ec_site.current_price != product_info.get('price'):
@@ -186,8 +176,6 @@ class ProductService:
                     effective_price=product_info.get('effective_price', product_info.get('price')),
                     captured_at=timezone.now()
                 )
-                logger.info('価格履歴を作成しました - 商品: %s..., 価格: %s円', 
-                        product.name[:20], price_history.price)
         except Exception as e:
             logger.error('価格履歴の保存中にエラーが発生しました - 商品: %s..., エラー: %s', 
                         product.name[:20], str(e), exc_info=True)
