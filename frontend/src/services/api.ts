@@ -24,6 +24,16 @@ const baseQueryWithReauth: BaseQueryFn<
     // クレデンシャル（Cookie）を含める設定を追加
     credentials: 'include',
     prepareHeaders: (headers, { getState }) => {
+      // CSRFトークンを取得
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+
+      if (csrfToken) {
+        headers.set('X-CSRFToken', csrfToken);
+      }
+
       // まずReduxストアからトークンを取得
       const token = (getState() as RootState).auth.token;
       
@@ -47,6 +57,7 @@ const baseQueryWithReauth: BaseQueryFn<
       // 基本的なヘッダー設定
       headers.set('Content-Type', 'application/json');
       headers.set('Accept', 'application/json');
+      headers.set('X-Requested-With', 'XMLHttpRequest');
       
       return headers;
     },

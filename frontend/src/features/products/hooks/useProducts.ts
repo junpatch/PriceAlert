@@ -15,6 +15,7 @@ import {
   setLoading,
   setError
 } from '../slices/productsSlice';
+import { Product } from '../../../types';
 
 export const useProducts = () => {
   const { productList, selectedProduct, priceHistory, loading, error } = useAppSelector(state => state.products);
@@ -43,8 +44,13 @@ export const useProducts = () => {
   const getProductDetails = async (productId: number) => {
     dispatch(setLoading(true));
     try {
-      const { data: product } = await useGetProductByIdQuery(productId);
-      if (product) {
+      const { data: userProduct } = await useGetProductByIdQuery(productId);
+      if (userProduct?.product) {
+        const product: Product = {
+          ...userProduct,
+          name: userProduct.product.name,
+          ec_sites: userProduct.product.ec_sites
+        };
         dispatch(setSelectedProduct(product));
       }
     } catch (err) {

@@ -22,6 +22,7 @@ import NotificationsPage from "@pages/NotificationsPage";
 import SettingsPage from "@pages/SettingsPage";
 import ForgotPasswordPage from "@pages/ForgotPasswordPage";
 import ResetPasswordPage from "@pages/ResetPasswordPage";
+import GlobalErrorHandler from "@components/common/GlobalErrorHandler";
 import { useAppSelector } from "@hooks/index";
 
 // テーマ設定
@@ -91,6 +92,7 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <GlobalErrorHandler />
         <Layout>
           <Routes>
             {/* パブリックルート */}

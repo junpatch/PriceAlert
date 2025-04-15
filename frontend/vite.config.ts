@@ -24,6 +24,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost',
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('プロキシエラー', err);

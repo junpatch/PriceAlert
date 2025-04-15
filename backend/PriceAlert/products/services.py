@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Set, Union, Any, Tuple
+from typing import Dict, List, Optional, Set, Any, Tuple
 from django.utils import timezone
 from django.db import transaction
 from .models import Product, ECSite, ProductOnECSite, PriceHistory, UserProduct
@@ -107,14 +107,14 @@ class ProductService:
                     stats['new_products'] += 1
                 
                 # ECサイト情報の保存
-                product_on_ec_site, created = self._save_ec_site_info(product_info, product)
+                product_on_ec_site, created, is_price_changed = self._save_ec_site_info(product_info, product)
                 if created:
                     stats['new_ec_sites'] += 1
                 else:
                     stats['updated_ec_sites'] += 1
 
                 # 価格履歴の保存
-                if created or product_on_ec_site.current_price != product_info.get('price'):
+                if is_price_changed:
                     stats['new_price_histories'] += 1
 
                 # 結果リストに追加（重複を排除）
@@ -145,8 +145,30 @@ class ProductService:
                 
         return products
     
-    def _save_ec_site_info(self, product_info: Dict[str, Any], product: Product) -> Tuple[ProductOnECSite, bool]:
+    def _save_ec_site_info(self, product_info: Dict[str, Any], product: Product) -> Tuple[ProductOnECSite, bool, bool]:
         """ECサイト情報を保存する共通メソッド"""
+
+        # 価格履歴保存するかを先に判断
+        try:
+            product_on_ec_site = ProductOnECSite.objects.filter(
+                product=product,
+                ec_site=ECSite.objects.get(code=product_info.get('ec_site')),
+                ec_product_id=product_info.get('ec_product_id')
+            ).first()
+            if  product_on_ec_site and \
+                (
+                    product_on_ec_site.current_price != product_info.get('price') or \
+                    product_on_ec_site.effective_price != product_info.get('effective_price')
+                ):
+                is_price_changed = True # 価格履歴保存が必要
+            else:
+                is_price_changed = False
+
+        except Exception as e:
+            logger.error('前回の価格履歴との比較中にエラーが発生しました。履歴を保存して続行します - 商品: %s, エラー: %s', 
+                        product.name, str(e), exc_info=True)
+            is_price_changed = True
+
         # ECサイト上の商品情報を保存
         product_on_ec_site, created = ProductOnECSite.objects.update_or_create(
             product=product,
@@ -168,7 +190,7 @@ class ProductService:
         
         # 価格履歴を保存
         try:
-            if created or product_on_ec_site.current_price != product_info.get('price'):
+            if created or is_price_changed:
                 price_history = PriceHistory.objects.create(
                     product_on_ec_site=product_on_ec_site,
                     price=product_info.get('price'),
@@ -176,7 +198,8 @@ class ProductService:
                     effective_price=product_info.get('effective_price', product_info.get('price')),
                     captured_at=timezone.now()
                 )
+                
         except Exception as e:
             logger.error('価格履歴の保存中にエラーが発生しました - 商品: %s..., エラー: %s', 
                         product.name[:20], str(e), exc_info=True)
-        return product_on_ec_site, created
+        return product_on_ec_site, created, is_price_changed

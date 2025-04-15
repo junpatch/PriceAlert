@@ -47,3 +47,4 @@ python-dotenv==1.0.1
 loguru==0.7.2
 colorlog==6.9.0
 concurrent-log-handler==0.9.25
+drf-yasg==1.21.10

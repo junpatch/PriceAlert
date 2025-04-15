@@ -77,13 +77,13 @@ class AmazonConnector(ECConnector):
                     continue
 
                 asin = item.asin if hasattr(item, 'asin') else None
-                url = item.detail_page_url if hasattr(item, 'detail_page_url') else None
+                # url = item.detail_page_url if hasattr(item, 'detail_page_url') else None
                 
-                if not asin or not url:
-                    continue
+                # if not asin or not url:
+                #     continue
                 
                 # 商品情報整形
-                product_data = self._format_product_data(item, asin=asin, url=url, jan_code=jan_code)
+                product_data = self._format_product_data(item, asin=asin, jan_code=jan_code)
                 result.append(product_data)
             
             return result

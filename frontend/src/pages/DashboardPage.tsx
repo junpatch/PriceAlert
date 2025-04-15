@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -23,39 +23,41 @@ const DashboardPage: React.FC = () => {
   const { productList, loading, error, updateProduct, deleteProduct } =
     useProducts();
 
-  // デバッグ用: 商品リストを確認
-  React.useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log("商品リスト:", productList);
-      // 有効な商品数をチェック
-      const validProducts = productList.filter((item) => !!item.product);
-      console.log("有効な商品数:", validProducts.length);
-      console.log(
-        "productプロパティがnullの商品数:",
-        productList.length - validProducts.length
-      );
-    }
+  const stats = useMemo(() => {
+    const validProducts = productList.filter((item) => !!item.product);
+    return {
+      total: productList.length,
+      valid: validProducts.length,
+      invalid: productList.length - validProducts.length,
+    };
   }, [productList]);
 
-  // productプロパティが存在する商品のみをフィルタリング
-  const validProductList = productList.filter((item) => !!item.product);
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("商品リストの状態が更新されました:", {
+        商品リスト: productList,
+        有効な商品数: stats.valid,
+        無効な商品数: stats.invalid,
+      });
+    }
+  }, [productList, stats]);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<UserProduct | null>(
+  const [selectedProduct, setSelectedProduct] = useState<UserProduct | null>(
     null
   );
 
   const handleDeleteClick = (product: UserProduct) => {
-    setProductToDelete(product);
+    setSelectedProduct(product);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (productToDelete) {
+    if (selectedProduct) {
       try {
-        await deleteProduct(productToDelete.id);
+        await deleteProduct(selectedProduct.id);
         setDeleteDialogOpen(false);
-        setProductToDelete(null);
+        setSelectedProduct(null);
       } catch (error) {
         console.error("商品の削除に失敗しました", error);
       }
@@ -64,7 +66,7 @@ const DashboardPage: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
-    setProductToDelete(null);
+    setSelectedProduct(null);
   };
 
   const handleToggleNotification = async (id: number, enabled: boolean) => {
@@ -103,7 +105,7 @@ const DashboardPage: React.FC = () => {
 
       {loading ? (
         <LoadingSpinner />
-      ) : validProductList.length === 0 ? (
+      ) : stats.valid === 0 ? (
         <Box sx={{ py: 5, textAlign: "center" }}>
           <Typography variant="body1" color="text.secondary" paragraph>
             まだ商品が登録されていません。
@@ -119,7 +121,7 @@ const DashboardPage: React.FC = () => {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {validProductList.map((userProduct) => (
+          {productList.map((userProduct) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={userProduct.id}>
               <ProductCard
                 userProduct={userProduct}
@@ -140,8 +142,8 @@ const DashboardPage: React.FC = () => {
         <DialogTitle id="delete-dialog-title">商品の削除</DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            {productToDelete?.product?.name ? (
-              <>「{productToDelete.product.name}」を削除しますか？</>
+            {selectedProduct?.product?.name ? (
+              <>「{selectedProduct.product.name}」を削除しますか？</>
             ) : (
               <>この商品を削除しますか？</>
             )}

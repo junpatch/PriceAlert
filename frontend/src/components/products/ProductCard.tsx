@@ -37,12 +37,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   if (!product) return null;
 
-  // デバッグ用
-  if (import.meta.env.DEV) {
-    console.log("ProductCard - 商品データ:", product);
-    console.log("ProductCard - EC情報(ec_sites):", product.ec_sites);
-  }
-
   const ecSites = product.ec_sites || [];
 
   // 型引数を使わずに明示的な型定義
@@ -55,10 +49,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     },
     null
   );
-
-  if (import.meta.env.DEV) {
-    console.log("ProductCard - 最安値:", lowestPrice);
-  }
 
   const getBestEcSite = () => {
     if (ecSites.length === 0) return null;
@@ -78,10 +68,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const bestSite = getBestEcSite();
-
-  if (import.meta.env.DEV) {
-    console.log("ProductCard - 最安値サイト:", bestSite);
-  }
 
   const handleCardClick = (e: React.MouseEvent) => {
     // アイコンボタンやリンクがクリックされた場合は、デフォルトの動作を優先

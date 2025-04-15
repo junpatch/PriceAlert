@@ -21,7 +21,7 @@ export interface ECSite {
  */
 export interface ProductOnECSite {
   id: number;
-  ec_site?: ECSite;
+  ec_site: ECSite;
   ec_site_id: number;
   product_id: number;
   ec_product_id: string;
@@ -44,7 +44,7 @@ export interface ProductOnECSite {
  */
 export interface PriceHistory {
   id: number;
-  product_on_ec_site_id: number;
+  product_on_ec_site: ProductOnECSite;
   price: number;
   points: number;
   effective_price: number;

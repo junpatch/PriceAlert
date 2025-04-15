@@ -1,6 +1,6 @@
 # products/serializers.py
 from rest_framework import serializers
-from .models import Product, ProductOnECSite, UserProduct, ECSite
+from .models import Product, ProductOnECSite, UserProduct, ECSite, PriceHistory
 
 class ECSiteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,6 +27,13 @@ class UserProductSerializer(serializers.ModelSerializer):
         model = UserProduct
         fields = ['id', 'user', 'product',  'price_threshold', 'threshold_type', 'threshold_percentage', 'notification_enabled', 'display_order', 'memo', 'created_at', 'updated_at']
         read_only_fields = ['user']
+
+class PriceHistorySerializer(serializers.ModelSerializer):
+    product_on_ec_site = ProductOnECSiteSerializer(read_only=True)
+    
+    class Meta:
+        model = PriceHistory
+        fields = ['id', 'points', 'effective_price', 'captured_at', 'created_at', 'product_on_ec_site', 'price']
 
 class BaseProductSerializer(serializers.Serializer):
     """URLまたはJANコードのいずれかを使う共通シリアライザ"""

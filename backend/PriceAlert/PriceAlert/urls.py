@@ -17,9 +17,27 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
+
+info = openapi.Info(
+    title='Forum API',
+    default_version='v1',
+    description='掲示板アプリ向けAPI',
+    contact=openapi.Contact(email='daeu@test.com'),
+    license=openapi.License(name="Apache 2.0", url="http://www.apache.org/licenses/LICENSE-2.0.html"),
+)
+
+schema_view = get_schema_view(
+    info,
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     
     # API V1エンドポイント
     path('api/v1/auth/', include('users.urls')),

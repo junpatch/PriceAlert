@@ -18,7 +18,6 @@ import {
   Switch,
   FormControlLabel,
   Chip,
-  IconButton,
   Link,
 } from "@mui/material";
 import {
@@ -84,7 +83,6 @@ const ProductDetailPage: React.FC = () => {
       // デバッグ用
       if (import.meta.env.DEV) {
         console.log("UserProduct 詳細:", userProduct);
-        console.log("商品情報:", userProduct.product);
       }
     }
   }, [userProduct]);
@@ -308,7 +306,7 @@ const ProductDetailPage: React.FC = () => {
                 <TextField
                   label="目標価格"
                   type="number"
-                  value={priceThreshold || ""}
+                  value={priceThreshold}
                   onChange={(e) =>
                     setPriceThreshold(Number(e.target.value) || undefined)
                   }
@@ -355,7 +353,10 @@ const ProductDetailPage: React.FC = () => {
                 価格推移
               </Typography>
               {priceHistory && priceHistory.length > 0 ? (
-                <PriceHistoryChart data={priceHistory} />
+                <PriceHistoryChart
+                  data={priceHistory}
+                  threshold={priceThreshold || 0}
+                />
               ) : (
                 <Typography variant="body2" color="text.secondary">
                   価格履歴データがありません

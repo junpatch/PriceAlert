@@ -3,8 +3,8 @@ import re
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework import serializers
-from .models import Product, UserProduct, ProductOnECSite, ECSite
-from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, ProductSearchSerializer
+from .models import Product, UserProduct, ProductOnECSite, ECSite, PriceHistory
+from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, ProductSearchSerializer, PriceHistorySerializer
 from rest_framework import viewsets
 from django.shortcuts import get_object_or_404
 from .services import ProductService
@@ -56,6 +56,24 @@ class ProductViewSet(viewsets.ViewSet):
             return Response({"detail": "予期せぬエラーが発生しました"}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # GET: user-products/{pk}/price-history/
+    @action(detail=True, methods=['get'], url_path='price-history')
+    def price_history(self, request, *args, **kwargs):
+        """ユーザー商品の価格履歴を取得"""
+        pk = kwargs['pk']
+        logger.info('ユーザー商品の価格履歴の取得を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
+        try:
+            price_history = PriceHistory.objects.filter(
+                product_on_ec_site__product__id=pk
+            )
+            serializer = PriceHistorySerializer(price_history, many=True)
+            logger.debug('ユーザー商品の価格履歴を取得しました - 商品: %s', price_history[0].product_on_ec_site.product.name)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error('ユーザー商品の価格履歴の取得中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
+                        pk, request.user.username, str(e), exc_info=True)
+            return Response({"detail": "予期せぬエラーが発生しました"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     # POST: products/
     def create(self, request):
         pass
@@ -64,7 +82,7 @@ class ProductViewSet(viewsets.ViewSet):
     def destroy(self, request, *args, **kwargs):
         pass
 
-
+# user-products/
 class UserProductViewSet(viewsets.ViewSet):
     """
     ユーザーと商品の関連付けを管理するAPI
@@ -104,7 +122,8 @@ class UserProductViewSet(viewsets.ViewSet):
                         pk, request.user.username, str(e), exc_info=True)
             return Response({"detail": "予期せぬエラーが発生しました"}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    
+    # POST: user-products/
     def create(self, request):
         """URLまたはJANコードから商品を登録"""
         logger.info('商品登録を開始 - ユーザー: %s', request.user.username)
