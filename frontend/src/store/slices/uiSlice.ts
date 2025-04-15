@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { UIState } from '@types/index';
+import { UIState } from '@/types';
 
 const initialState: UIState = {
   isLoading: false,

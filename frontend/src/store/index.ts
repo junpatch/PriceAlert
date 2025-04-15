@@ -5,6 +5,7 @@ import productsReducer from '@features/products/slices/productsSlice';
 import notificationsReducer from '@features/notifications/slices/notificationsSlice';
 import uiReducer from './slices/uiSlice';
 import settingsReducer from './slices/settingsSlice';
+import cacheReducer from './slices/cacheSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     notifications: notificationsReducer,
     ui: uiReducer,
     settings: settingsReducer,
+    cache: cacheReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(api.middleware),

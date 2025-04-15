@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Typography, Box } from "@mui/material";
+import { Container, Box } from "@mui/material";
 import ForgotPasswordForm from "@features/auth/components/ForgotPasswordForm";
 
 const ForgotPasswordPage: React.FC = () => {

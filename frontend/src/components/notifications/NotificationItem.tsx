@@ -15,7 +15,7 @@ import {
   PriceChange as PriceChangeIcon,
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { Notification } from '@types/index';
+import { Notification } from '@/types';
 
 interface NotificationItemProps {
   notification: Notification;

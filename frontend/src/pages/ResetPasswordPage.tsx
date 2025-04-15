@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Typography, Box } from "@mui/material";
+import { Container, Box } from "@mui/material";
 import ResetPasswordForm from "@features/auth/components/ResetPasswordForm";
 
 const ResetPasswordPage: React.FC = () => {

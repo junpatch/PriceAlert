@@ -34,7 +34,7 @@ import ErrorAlert from "@components/common/ErrorAlert";
 import ECSiteLogo from "@components/ec-sites/ECSiteLogo";
 import { useProducts } from "@features/products/hooks/useProducts";
 import { useGetProductByIdQuery, useGetPriceHistoryQuery } from "@services/api";
-import { ProductOnECSite } from "@/types/ecSite";
+import { ProductOnECSite } from "@/types";
 import { formatErrorMessage } from "@/utils/apiUtils";
 
 const ProductDetailPage: React.FC = () => {

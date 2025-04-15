@@ -18,7 +18,7 @@ import PageContainer from '@components/layout/PageContainer';
 import ErrorAlert from '@components/common/ErrorAlert';
 import LoadingSpinner from '@components/common/LoadingSpinner';
 import { useGetUserSettingsQuery, useUpdateUserSettingsMutation } from '@services/api';
-import { UserSettings } from '@types/index';
+import { UserSettings } from '@/types';
 
 const SettingsPage: React.FC = () => {
   const { data: userSettings, isLoading, error } = useGetUserSettingsQuery();

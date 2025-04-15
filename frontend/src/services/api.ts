@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import { RootState } from '@store/index';
 import { logout } from '@features/auth/slices/authSlice';
+import { getCache, setCacheData } from '@/utils/cache';
 import {
   User,
   Product,
@@ -9,8 +10,8 @@ import {
   Notification,
   UserSettings,
   Alert,
-  ECSite
-} from '../types';
+  ECSite,
+} from '@/types';
 
 // 認証エラーをインターセプトするベースクエリ関数
 const baseQueryWithReauth: BaseQueryFn<
@@ -63,7 +64,21 @@ const baseQueryWithReauth: BaseQueryFn<
     },
   });
 
-  // まず通常のリクエストを実行
+  // キャッシュの処理
+  if (typeof args === 'object' && 'url' in args) {
+    const { url, method, params } = args;
+    const cacheKey = `${method}:${url}${params ? `:${JSON.stringify(params)}` : ''}`;
+    
+    // GETリクエストの場合のみキャッシュをチェック
+    if (method === 'GET') {
+      const cache = getCache(api.getState() as RootState, cacheKey);
+      if (cache) {
+        return { data: cache.data };
+      }
+    }
+  }
+
+  // 通常のリクエストを実行
   const result = await baseQuery(args, api, extraOptions);
 
   // 401 Unauthorized エラーをチェック
@@ -84,6 +99,13 @@ const baseQueryWithReauth: BaseQueryFn<
     }
   }
 
+  // 成功したGETリクエストの結果をキャッシュ
+  if (result.data && typeof args === 'object' && 'url' in args && args.method === 'GET') {
+    const { url, method, params } = args;
+    const cacheKey = `${method}:${url}${params ? `:${JSON.stringify(params)}` : ''}`;
+    setCacheData(api.dispatch, cacheKey, result.data);
+  }
+
   return result;
 };
 
@@ -91,7 +113,7 @@ const baseQueryWithReauth: BaseQueryFn<
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Products', 'Product', 'Notifications', 'Settings'],
+  tagTypes: ['Products', 'Product', 'Notifications', 'Settings', 'Cache'],
   endpoints: (builder) => ({
     // 認証関連
     login: builder.mutation<{ access_token: string; refresh_token: string; user: User }, { email: string; password: string }>({
@@ -100,6 +122,7 @@ export const api = createApi({
         method: 'POST',
         body: credentials,
       }),
+      invalidatesTags: ['Cache'],
     }),
     register: builder.mutation<{ access_token: string; refresh_token: string; user: User }, { email: string; password: string; username: string; confirmPassword: string }>({
       query: (userData) => ({
@@ -107,22 +130,20 @@ export const api = createApi({
         method: 'POST',
         body: userData,
       }),
+      invalidatesTags: ['Cache'],
     }),
     logout: builder.mutation<void, void>({
       query: () => {
-        // 明示的に認証ヘッダーを追加（トレース用）
         const token = localStorage.getItem('token');
-        
         return {
           url: 'auth/logout/',
           method: 'POST',
-          // 明示的にヘッダーを設定
           headers: token ? {
             'Authorization': `Bearer ${token}`
           } : undefined
         };
       },
-      invalidatesTags: ['Products', 'Notifications', 'Settings'],
+      invalidatesTags: ['Products', 'Notifications', 'Settings', 'Cache'],
     }),
     refreshToken: builder.mutation<{ access_token: string }, { refresh_token: string }>({
       query: (data) => ({
@@ -130,9 +151,11 @@ export const api = createApi({
         method: 'POST',
         body: data,
       }),
+      invalidatesTags: ['Cache'],
     }),
     getCurrentUser: builder.query<User, void>({
       query: () => 'users/me/',
+      providesTags: ['Cache'],
     }),
     
     // パスワードリセット関連
@@ -166,7 +189,6 @@ export const api = createApi({
     // 商品関連
     getUserProducts: builder.query<UserProduct[], void>({
       query: () => 'user-products/',
-      // transformResponse: (response: { results: UserProduct[] }) => response.results || [],
       providesTags: ['Products'],
     }),
     getProductById: builder.query<UserProduct, number>({
@@ -188,7 +210,7 @@ export const api = createApi({
         method: 'POST',
         body: productData,
       }),
-      invalidatesTags: ['Products'],
+      invalidatesTags: ['Products', 'Cache'],
     }),
     updateUserProduct: builder.mutation<UserProduct, { id: number; price_threshold?: number; notification_enabled?: boolean; memo?: string; }>({
       query: ({ id, ...data }) => ({
@@ -196,14 +218,14 @@ export const api = createApi({
         method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: ['Products'],
+      invalidatesTags: ['Products', 'Cache'],
     }),
     deleteUserProduct: builder.mutation<void, number>({
       query: (id) => ({
         url: `user-products/${id}/`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Products'],
+      invalidatesTags: ['Products', 'Cache'],
     }),
     
     // アラート関連
@@ -249,9 +271,9 @@ export const api = createApi({
       query: (id) => ({
         url: `notifications/mark-read/`,
         method: 'POST',
-        body: { notification_id: id }
+        body: { id },
       }),
-      invalidatesTags: ['Notifications'],
+      invalidatesTags: ['Notifications', 'Cache'],
     }),
     markAllNotificationsAsRead: builder.mutation<void, void>({
       query: () => ({
@@ -277,16 +299,16 @@ export const api = createApi({
     
     // 設定関連
     getUserSettings: builder.query<UserSettings, void>({
-      query: () => 'users/settings/',
+      query: () => 'settings/',
       providesTags: ['Settings'],
     }),
     updateUserSettings: builder.mutation<UserSettings, Partial<UserSettings>>({
       query: (settings) => ({
-        url: 'users/settings/',
-        method: 'PUT',
+        url: 'settings/',
+        method: 'PATCH',
         body: settings,
       }),
-      invalidatesTags: ['Settings'],
+      invalidatesTags: ['Settings', 'Cache'],
     }),
   }),
 });

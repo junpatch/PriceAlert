@@ -6,11 +6,10 @@ import {
   TextField,
   Button,
   Paper,
-  Link as MuiLink,
   Alert,
   Grid,
 } from "@mui/material";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@features/auth/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
@@ -40,7 +39,6 @@ const LoginPage: React.FC = () => {
   const { login, loading, error, isAuthenticated } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
 
   // ロケーション情報を取得して、セッション切れの場合にメッセージを表示
   const location = useLocation();
