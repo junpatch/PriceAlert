@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     
     # 自作アプリ
+    "accounts",
     "users",
     "products",
 ]
@@ -142,7 +143,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # カスタムユーザーモデルの設定
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 # REST Framework設定
 REST_FRAMEWORK = {
@@ -323,6 +324,12 @@ LOGGING = {
             'propagate': False,
         },
         'products': {
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
+        'accounts': {
             'handlers': ['console'],
             # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
             'level': 'DEBUG' if DEBUG else 'INFO',

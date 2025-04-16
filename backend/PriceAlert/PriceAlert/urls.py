@@ -40,6 +40,7 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     
     # API V1エンドポイント
-    path('api/v1/auth/', include('users.urls')),
+    path('api/v1/auth/', include('accounts.urls')),
+    path('api/v1/users/', include('users.urls')),
     path('api/v1/', include('products.urls')),
 ]

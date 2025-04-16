@@ -1,21 +1,13 @@
-from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework.routers import DefaultRouter
+from .views import UserViewSet, SettingsView
+from django.urls import path, include
 
-from .views import RegisterView, LoginView, LogoutView, UserProfileView, PasswordResetRequestView, PasswordResetConfirmView
+router = DefaultRouter()
+router.register(r'', UserViewSet, basename='me')
+router.register(r'settings', SettingsView, basename='settings')
 
-app_name = 'users'
 
 urlpatterns = [
-    # ユーザー登録・認証
-    path('register/', RegisterView.as_view(), name='register'),
-    path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # ユーザープロフィール
-    path('me/', UserProfileView.as_view(), name='profile'),
-    
-    # パスワードリセット
-    path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
-    path('password-reset/confirm/<str:token_url>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-] 
+    # 設定
+    path('', include(router.urls)),
+]
