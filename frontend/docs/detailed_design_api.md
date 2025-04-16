@@ -45,7 +45,7 @@ PriceAlert の API は、React 製フロントエンドと Django REST Framework
 | `/api/user-products/{id}/`                      | GET      | ユーザー商品詳細取得           | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
 | `/api/user-products/{id}/`                      | PUT,PATCH | ユーザー商品更新               | Yes                       | 本人の商品のみ   | ✅           | ✅         | ❌         |
 | `/api/user-products/{id}/`                      | DELETE   | ユーザー商品削除               | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
-| `/api/products/{id}/price-history/`        | GET      | 価格履歴取得           | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
+| `/api/products/{id}/price-history/`        | GET      | 価格履歴取得           | Yes                       | 本人の商品のみ   | ✅           | ✅         | ✅         |
 | `/api/products/{id}/alerts/`               | GET      | アラート設定一覧       | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
 | `/api/products/{id}/alerts/`               | POST     | アラート設定追加       | Yes                       | 本人の商品のみ   | ✅           | ❌         | ❌         |
 | `/api/alerts/{id}/`                        | GET      | アラート詳細取得       | Yes                       | 本人の設定のみ   | ✅           | ❌         | ❌         |

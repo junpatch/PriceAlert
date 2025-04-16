@@ -13,6 +13,9 @@ import {
   ECSite,
 } from '@/types';
 
+// APIエラー監視のためのカスタムイベント名
+const API_ERROR_EVENT = 'api-auth-error';
+
 // 認証エラーをインターセプトするベースクエリ関数
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -87,15 +90,29 @@ const baseQueryWithReauth: BaseQueryFn<
       console.warn('認証エラー（401）が発生しました。セッションが切れている可能性があります。');
     }
 
-    // リフレッシュトークンを試す処理をここに実装することも可能
-    // ...
+    // ログアウトエンドポイントや特定のエンドポイントでの401エラーは無視する
+    const ignoreEndpoints = ['/auth/logout/', '/auth/refresh/'];
+    let shouldIgnore = false;
 
-    // セッション切れとして処理し、ログアウトアクションをディスパッチ
-    api.dispatch(logout());
-    
-    // 開発環境でログを出力
-    if (import.meta.env.DEV) {
-      console.log('認証エラーによりログアウト処理を実行しました');
+    // リクエストURLをチェック
+    if (typeof args === 'object' && 'url' in args) {
+      const url = args.url;
+      shouldIgnore = ignoreEndpoints.some(endpoint => url.includes(endpoint));
+      
+      if (shouldIgnore) {
+        console.log(`401エラーですが、無視するエンドポイント(${url})のため、イベントをディスパッチしません。`);
+      } else {
+        // 401エラーのイベントをディスパッチ
+        const authErrorEvent = new CustomEvent(API_ERROR_EVENT, {
+          detail: {
+            status: 401,
+            error: result.error,
+            url: typeof args === 'object' && 'url' in args ? args.url : 'unknown'
+          }
+        });
+        window.dispatchEvent(authErrorEvent);
+        console.log('401エラーを検出し、イベントをディスパッチしました。');
+      }
     }
   }
 
@@ -145,12 +162,25 @@ export const api = createApi({
       },
       invalidatesTags: ['Products', 'Notifications', 'Settings', 'Cache'],
     }),
-    refreshToken: builder.mutation<{ access_token: string }, { refresh_token: string }>({
+    refreshToken: builder.mutation<{ access_token: string; refresh_token: string }, { refresh: string }>({
       query: (data) => ({
         url: 'auth/refresh/',
         method: 'POST',
         body: data,
       }),
+      transformResponse: (response: any) => {
+        if (import.meta.env.DEV) {
+          console.log('リフレッシュトークンの生レスポンス:', response);
+        }
+        
+        // バックエンドのレスポンス形式を変換
+        // {access, refresh} → {access_token, refresh_token}
+        const transformedResponse = {
+          access_token: response.access,
+          refresh_token: response.refresh
+        };
+        return transformedResponse;
+      },
       invalidatesTags: ['Cache'],
     }),
     getCurrentUser: builder.query<User, void>({
@@ -299,12 +329,12 @@ export const api = createApi({
     
     // 設定関連
     getUserSettings: builder.query<UserSettings, void>({
-      query: () => 'settings/',
+      query: () => 'users/settings/me/',
       providesTags: ['Settings'],
     }),
     updateUserSettings: builder.mutation<UserSettings, Partial<UserSettings>>({
       query: (settings) => ({
-        url: 'settings/',
+        url: 'users/settings/me/',
         method: 'PATCH',
         body: settings,
       }),

@@ -24,6 +24,7 @@ import ForgotPasswordPage from "@pages/ForgotPasswordPage";
 import ResetPasswordPage from "@pages/ResetPasswordPage";
 import GlobalErrorHandler from "@components/common/GlobalErrorHandler";
 import { useAppSelector } from "@hooks/index";
+import { AuthProvider } from "@contexts/AuthContext";
 
 // テーマ設定
 const theme = createTheme({
@@ -92,33 +93,35 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <GlobalErrorHandler />
-        <Layout>
-          <Routes>
-            {/* パブリックルート */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route
-              path="/reset-password/:token"
-              element={<ResetPasswordPage />}
-            />
+        <AuthProvider>
+          <GlobalErrorHandler />
+          <Layout>
+            <Routes>
+              {/* パブリックルート */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route
+                path="/reset-password/:token"
+                element={<ResetPasswordPage />}
+              />
 
-            {/* 認証が必要なルート */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/products/add" element={<AddProductPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
+              {/* 認証が必要なルート */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/products/add" element={<AddProductPage />} />
+                <Route path="/products/:id" element={<ProductDetailPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
-            {/* 不明なルートはダッシュボードか未ログインならトップページへリダイレクト */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
-        <ToastContainer position="bottom-right" />
+              {/* 不明なルートはダッシュボードか未ログインならトップページへリダイレクト */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+          <ToastContainer position="bottom-right" />
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

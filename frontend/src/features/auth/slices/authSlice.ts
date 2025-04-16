@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, User } from '../../../types';
+import { AuthState, User } from '@/types';
 
 // localStorageからトークンを取得
 const getTokenFromStorage = (): string | null => {
@@ -48,7 +48,17 @@ const authSlice = createSlice({
     loginSuccess: (state, action: PayloadAction<{ user: User; access_token: string; refresh_token?: string }>) => {
       const token = action.payload.access_token;
       
-      state.user = action.payload.user;
+      // ユーザー情報をチェック
+      if (!action.payload.user || Object.keys(action.payload.user).length === 0) {
+        console.warn('loginSuccessに空のユーザー情報が渡されました。既存のユーザー情報を維持します。');
+        // 空オブジェクトの場合は既存のユーザー情報を維持
+        // state.userはそのまま
+      } else {
+        // 有効なユーザー情報があれば更新
+        console.log('loginSuccessで新しいユーザー情報を設定:', action.payload.user);
+        state.user = action.payload.user;
+      }
+      
       state.token = token;
       state.isAuthenticated = true;
       state.loading = false;
@@ -59,8 +69,11 @@ const authSlice = createSlice({
       localStorage.setItem('token_timestamp', Date.now().toString());
       
       // リフレッシュトークンが存在する場合は保存
-      if (action.payload.refresh_token) {
+      if (action.payload.refresh_token && action.payload.refresh_token.trim() !== '') {
+        console.log('新しいリフレッシュトークンを保存します');
         localStorage.setItem('refresh_token', action.payload.refresh_token);
+      } else {
+        console.warn('リフレッシュトークンがレスポンスに含まれていないか空です');
       }
     },
     setUser: (state, action: PayloadAction<User>) => {

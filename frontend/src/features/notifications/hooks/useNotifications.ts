@@ -15,9 +15,13 @@ import {
 
 export const useNotifications = () => {
   const { notifications, unreadCount, loading, error } = useAppSelector(state => state.notifications);
+  const { isAuthenticated } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
 
-  const { data: notificationsData, isLoading: isNotificationsLoading } = useGetNotificationsQuery();
+  const { data: notificationsData, isLoading: isNotificationsLoading } = useGetNotificationsQuery(undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true
+  });
   const [markNotificationAsReadMutation, { isLoading: isMarkReadLoading }] = useMarkNotificationAsReadMutation();
   const [markAllNotificationsAsReadMutation, { isLoading: isMarkAllReadLoading }] = useMarkAllNotificationsAsReadMutation();
 

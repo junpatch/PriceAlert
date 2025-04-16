@@ -1,14 +1,12 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { RootState } from "@store/index";
 import { setError } from "@features/auth/slices/authSlice";
-import { useAuth } from "@features/auth/hooks/useAuth";
+import { useAuth } from "@contexts/AuthContext";
 
 const GlobalErrorHandler: React.FC = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { logout } = useAuth();
   const error = useSelector((state: RootState) => state.auth.error);
 

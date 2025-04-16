@@ -28,7 +28,7 @@ import {
   Person as PersonIcon,
 } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@features/auth/hooks/useAuth";
+import { useAuth } from "@contexts/AuthContext";
 import { useNotifications } from "@features/notifications/hooks/useNotifications";
 
 const Header: React.FC = () => {

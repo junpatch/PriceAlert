@@ -10,14 +10,14 @@ import {
   Grid,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@features/auth/hooks/useAuth";
+import { useAuth } from "@contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ErrorAlert from "@components/common/ErrorAlert";
 import { toast } from "react-toastify";
-import { setError } from "@features/auth/slices/authSlice";
 import { useAppDispatch } from "@hooks/index";
+import { setError } from "@features/auth/slices/authSlice";
 
 interface LoginFormData {
   email: string;
