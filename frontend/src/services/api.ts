@@ -169,10 +169,6 @@ export const api = createApi({
         body: data,
       }),
       transformResponse: (response: any) => {
-        if (import.meta.env.DEV) {
-          console.log('リフレッシュトークンの生レスポンス:', response);
-        }
-        
         // バックエンドのレスポンス形式を変換
         // {access, refresh} → {access_token, refresh_token}
         const transformedResponse = {
