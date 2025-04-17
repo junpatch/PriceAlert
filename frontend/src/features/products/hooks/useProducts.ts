@@ -79,8 +79,36 @@ export const useProducts = () => {
   const handleRegisterProduct = async (url: string, priceThreshold?: number) => {
     try {
       await registerProduct({ url, price_threshold: priceThreshold }).unwrap();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '商品の登録に失敗しました';
+    } catch (err: any) {
+      let errorMessage = '商品の登録に失敗しました';
+      
+      if (err.status) {
+        switch (err.status) {
+          case 400:
+            if (err.data?.detail) {
+              errorMessage = err.data.detail;
+            } else if (err.data?.url) {
+              errorMessage = `URL: ${err.data.url}`;
+            } else if (err.data?.jan_code) {
+              errorMessage = `JANコード: ${err.data.jan_code}`;
+            }
+            break;
+          case 404:
+            errorMessage = err.data?.detail || '商品が見つかりませんでした';
+            break;
+          case 503:
+            errorMessage = '外部サービスとの接続に失敗しました。しばらく経ってからお試しください。';
+            break;
+          case 500:
+            errorMessage = '予期せぬエラーが発生しました。システム管理者にお問い合わせください。';
+            break;
+        }
+      } else if (err.error) {
+        errorMessage = err.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       dispatch(setError(errorMessage));
       throw err;
     }
@@ -93,8 +121,17 @@ export const useProducts = () => {
   }) => {
     try {
       await updateUserProduct({ id, ...data }).unwrap();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '商品の更新に失敗しました';
+    } catch (err: any) {
+      let errorMessage = '商品の更新に失敗しました';
+      
+      if (err.status && err.data?.detail) {
+        errorMessage = err.data.detail;
+      } else if (err.error) {
+        errorMessage = err.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       dispatch(setError(errorMessage));
       throw err;
     }
@@ -103,8 +140,17 @@ export const useProducts = () => {
   const handleDeleteProduct = async (id: number) => {
     try {
       await deleteUserProduct(id).unwrap();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '商品の削除に失敗しました';
+    } catch (err: any) {
+      let errorMessage = '商品の削除に失敗しました';
+      
+      if (err.status && err.data?.detail) {
+        errorMessage = err.data.detail;
+      } else if (err.error) {
+        errorMessage = err.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       dispatch(setError(errorMessage));
       throw err;
     }
