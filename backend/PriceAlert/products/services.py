@@ -29,6 +29,9 @@ class ProductService:
             if url:
                 # URLからの検索実行
                 jan_codes = self.factory.search_by_url(url)
+                if not jan_codes:
+                    logger.warning('URLからの検索でJANコードが見つかりませんでした - URL: %s', url)
+                    return []
             elif jan_code:
                 jan_codes = {jan_code}
             else:

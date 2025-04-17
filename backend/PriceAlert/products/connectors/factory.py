@@ -61,14 +61,13 @@ class ECConnectorFactory:
             
             # 検索実行
             jan_codes = connector.search_by_url(url)
-            if not jan_codes or len(jan_codes) == 0:
-                raise ValueError(f"URL検索でJANコードが見つかりませんでした")
             
-            return jan_codes
+            return jan_codes or set()
             
-        except Exception as e:
-            logger.error('URL検索中にエラーが発生しました - URL: %s, エラー: %s', 
-                        url, str(e), exc_info=True)
+        except ValueError as e:
+            # 一箇所だけでログを出力
+            logger.error(f"URL検索中にエラーが発生しました - URL: {url}, エラー: {str(e)}")
+            # 上位に例外を再送出（オプション）
             raise
     
     def search_by_jan_code(self, jan_code: str) -> List[Dict[str, Any]]:
@@ -80,11 +79,9 @@ class ECConnectorFactory:
             
             # 各ECサイトで検索
             for ec_site_code in self._site_urls_patterns.keys():
-                    
                 try:
                     # ECサイト登録確認
                     self._create_ECSite(ec_site_code)
-                    
                     # コネクター取得
                     connector = self._get_connector(ec_site_code)
                     
@@ -101,6 +98,7 @@ class ECConnectorFactory:
                     logger.warning(
                         'ECサイト個別の検索でエラーが発生しました - JANコード: %s, ECサイト: %s, エラー: %s', 
                         jan_code, ec_site_code, str(e))
+                    
             site_counts = Counter(dict['ec_site'] for dict in all_product_infos if dict.get('ec_site') in {'amazon', 'rakuten', 'yahoo'})
             logger.info(    
                 f"JANコード検索が完了しました - JANコード: {jan_code}, - 結果件数: "
@@ -121,9 +119,8 @@ class ECConnectorFactory:
             for pattern in patterns:
                 if pattern in url:
                     logger.debug('ECサイトを識別しました: %s', site_code)
-                    return site_code
-        
-        logger.error('未対応のECサイトURLです: %s', url)
+                    return site_code        
+        logger.error('対応していないECサイトのURLです: %s', url)
         raise ValueError("対応していないECサイトのURLです")
 
     def _get_ec_site_name(self, code: str) -> str:

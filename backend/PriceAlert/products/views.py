@@ -151,6 +151,8 @@ class UserProductViewSet(viewsets.ViewSet):
             
             # 検索結果をシリアライズして返却
             serializer = ProductSerializer(products, many=True)
+            if len(serializer.data) == 0:
+                return Response({"detail": "商品が見つかりませんでした"}, status=status.HTTP_404_NOT_FOUND)
             logger.info('商品登録が完了しました - 結果件数: %d, ユーザー: %s', 
                        len(products), request.user.username)
             return Response(serializer.data)
