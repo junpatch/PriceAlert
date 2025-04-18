@@ -3,7 +3,6 @@ import React, {
   useContext,
   useState,
   useEffect,
-  useRef,
   useCallback,
 } from "react";
 import { useDispatch } from "react-redux";

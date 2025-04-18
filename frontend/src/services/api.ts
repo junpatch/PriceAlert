@@ -1,6 +1,5 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 import { RootState } from '@store/index';
-import { logout } from '@features/auth/slices/authSlice';
 import { getCache, setCacheData } from '@/utils/cache';
 import {
   User,
