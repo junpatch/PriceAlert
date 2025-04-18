@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
+    "django_celery_beat",
     # サードパーティアプリ
     "rest_framework",
     "rest_framework_simplejwt",
@@ -182,12 +182,6 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-# CORS設定
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Viteの開発サーバー
-    "http://127.0.0.1:5173",
-]
-
 # CSRF設定
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -195,6 +189,10 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # CORS設定
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Viteの開発サーバー
+    "http://127.0.0.1:5173",
+]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -215,6 +213,14 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ] 
+
+# CELERY_BROKER_URL = 'redis://localhost:6379/0'  # RedisがBroker
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'memory://'  # または 'rpc://'
+CELERY_TASK_ALWAYS_EAGER = True  # タスクを即座に実行（同期処理）
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # メール設定（開発環境ではコンソール出力）
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

@@ -1,17 +1,15 @@
 import logging
-import re
-from rest_framework import status, permissions
+
+from rest_framework import status, permissions, serializers, viewsets
 from rest_framework.response import Response
-from rest_framework import serializers
-from .models import Product, UserProduct, ProductOnECSite, ECSite, PriceHistory
-from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, ProductSearchSerializer, PriceHistorySerializer
-from rest_framework import viewsets
-from django.shortcuts import get_object_or_404
-from .services import ProductService
-from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError
 from rest_framework.decorators import action
-# Create your views here.
+from django.shortcuts import get_object_or_404
+
+from .models import Product, UserProduct, ProductOnECSite, PriceHistory
+from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, PriceHistorySerializer
+from .services.product_service import ProductService
+
+
 
 logger = logging.getLogger('products.views')
 
@@ -74,6 +72,7 @@ class ProductViewSet(viewsets.ViewSet):
                         pk, request.user.username, str(e), exc_info=True)
             return Response({"detail": "予期せぬエラーが発生しました"}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     # POST: products/
     def create(self, request):
         pass

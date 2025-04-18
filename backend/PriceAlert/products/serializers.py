@@ -12,7 +12,7 @@ class ProductOnECSiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductOnECSite
-        fields = ['id', 'ec_site', 'current_price', 'effective_price', 'product_url', 'affiliate_url', 'seller_name', 'shipping_fee', 'condition', 'last_updated']
+        fields = ['id', 'ec_site', 'current_price', 'effective_price', 'product_url', 'affiliate_url', 'seller_name', 'shipping_fee', 'condition', 'last_updated', 'is_active', 'created_at', 'updated_at']
 
 class ProductSerializer(serializers.ModelSerializer):
     ec_sites = ProductOnECSiteSerializer(source='productonecsite_set', many=True, read_only=True)
