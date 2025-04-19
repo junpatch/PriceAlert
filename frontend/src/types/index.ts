@@ -131,6 +131,7 @@ export interface ProductsState {
 export interface NotificationsState {
   notifications: Notification[];
   unreadCount: number;
+  totalCount: number;
   loading: boolean;
   error: string | null;
 }

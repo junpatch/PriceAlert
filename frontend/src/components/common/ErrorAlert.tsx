@@ -35,12 +35,25 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
     return "エラーが発生しました";
   };
 
+  // エラーメッセージの詳細を表示するかどうかを判断する
+  const shouldShowErrorDetail = () => {
+    if (!error) return true;
+
+    // 特定のエラーケースでは詳細を表示しない
+    if (error.includes("見つかりません")) return false;
+    if (error.includes("外部サービス")) return false;
+    if (error.includes("接続に失敗")) return false;
+    if (error.includes("予期せぬエラー")) return false;
+
+    return true;
+  };
+
   return (
     <Collapse in={!!error}>
       <Box sx={{ mb: 2 }}>
         <Alert severity={severity} onClose={onClose}>
           <AlertTitle>{getErrorTitle()}</AlertTitle>
-          {error}
+          {shouldShowErrorDetail() ? error : null}
         </Alert>
       </Box>
     </Collapse>

@@ -31,6 +31,9 @@ import { IntervalManager } from "@/utils/intervalManager";
 import { Logger } from "@/utils/logger";
 import { ErrorHandler } from "@/utils/errorHandler";
 import { AUTH_CONSTANTS } from "@/constants/auth";
+import { api } from "@services/api";
+import { resetNotifications } from "@features/notifications/slices/notificationsSlice";
+import { clearAllCache } from "@store/slices/cacheSlice";
 
 // Logger初期化
 const logger = Logger.getLogger("AuthContext");
@@ -292,6 +295,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
+      // RTK Queryのキャッシュをリセット
+      dispatch(api.util.resetApiState());
+
+      // 通知状態をリセット
+      dispatch(resetNotifications());
+
+      // キャッシュをクリア
+      dispatch(clearAllCache());
+
       // ReduxストアとlocalStorageをクリア
       dispatch(logout());
 
@@ -302,6 +314,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // エラー時にもインターバルとステートをクリア
       IntervalManager.clearAll();
+
+      // RTK Queryのキャッシュをリセット
+      dispatch(api.util.resetApiState());
+
+      // 通知状態をリセット
+      dispatch(resetNotifications());
+
+      // キャッシュをクリア
+      dispatch(clearAllCache());
+
       dispatch(logout());
       navigate(AUTH_CONSTANTS.LOGIN_ROUTE);
     } finally {

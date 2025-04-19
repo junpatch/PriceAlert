@@ -1,9 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { NotificationsState, Notification } from '@/types';
+import { logout } from '@features/auth/slices/authSlice';
 
 const initialState: NotificationsState = {
   notifications: [],
   unreadCount: 0,
+  totalCount: 0,
   loading: false,
   error: null,
 };
@@ -14,8 +16,13 @@ const notificationsSlice = createSlice({
   reducers: {
     setNotifications: (state, action: PayloadAction<Notification[]>) => {
       state.notifications = action.payload;
-      state.unreadCount = action.payload.filter(notification => !notification.is_read).length;
       state.error = null;
+    },
+    setTotalCount: (state, action: PayloadAction<number>) => {
+      state.totalCount = action.payload;
+    },
+    setUnreadCount: (state, action: PayloadAction<number>) => {
+      state.unreadCount = action.payload;
     },
     addNotification: (state, action: PayloadAction<Notification>) => {
       state.notifications.unshift(action.payload);
@@ -27,14 +34,12 @@ const notificationsSlice = createSlice({
       const notification = state.notifications.find(n => n.id === action.payload);
       if (notification && !notification.is_read) {
         notification.is_read = true;
-        state.unreadCount -= 1;
       }
     },
     markAllAsRead: (state) => {
       state.notifications.forEach(notification => {
         notification.is_read = true;
       });
-      state.unreadCount = 0;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -42,16 +47,23 @@ const notificationsSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
+    resetNotifications: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logout, () => initialState);
   },
 });
 
 export const {
   setNotifications,
+  setTotalCount,
+  setUnreadCount,
   addNotification,
   markAsRead,
   markAllAsRead,
   setLoading,
   setError,
+  resetNotifications,
 } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer; 

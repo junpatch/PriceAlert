@@ -287,9 +287,13 @@ export const api = createApi({
     }),
     
     // 通知関連
-    getNotifications: builder.query<Notification[], void>({
-      query: () => 'notifications/',
-      transformResponse: (response: { results: Notification[] }) => response.results || [],
+    getNotifications: builder.query<{ count: number; next: string | null; previous: string | null; results: Notification[] }, { page?: number; is_read?: boolean }>({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
+        return `notifications/?${queryParams.toString()}`;
+      },
       providesTags: ['Notifications'],
     }),
     markNotificationAsRead: builder.mutation<void, number>({

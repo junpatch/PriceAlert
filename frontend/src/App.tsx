@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -23,8 +23,11 @@ import SettingsPage from "@pages/SettingsPage";
 import ForgotPasswordPage from "@pages/ForgotPasswordPage";
 import ResetPasswordPage from "@pages/ResetPasswordPage";
 import GlobalErrorHandler from "@components/common/GlobalErrorHandler";
-import { useAppSelector } from "@hooks/index";
+import { useAppSelector, useAppDispatch } from "@hooks/index";
 import { AuthProvider } from "@contexts/AuthContext";
+import { api } from "@services/api";
+import { resetNotifications } from "@features/notifications/slices/notificationsSlice";
+import { clearAllCache } from "@store/slices/cacheSlice";
 
 // テーマ設定
 const theme = createTheme({
@@ -63,8 +66,29 @@ const theme = createTheme({
 
 // 認証が必要なルートのラッパーコンポーネント
 const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const location = useLocation();
+  const dispatch = useAppDispatch();
+
+  // ユーザーIDが変更されたかどうかを追跡する
+  useEffect(() => {
+    // ユーザーIDをlocalStorageに保存し、ユーザー切り替えを検出する
+    const prevUserId = localStorage.getItem("lastUserId");
+    const currentUserId = user?.id.toString();
+
+    if (currentUserId && prevUserId && prevUserId !== currentUserId) {
+      console.log("ユーザーが切り替わりました。キャッシュをクリアします。");
+      // ユーザー切り替え検出時、APIキャッシュをリセット
+      dispatch(api.util.resetApiState());
+      dispatch(resetNotifications());
+      dispatch(clearAllCache());
+    }
+
+    // 現在のユーザーIDを保存
+    if (currentUserId) {
+      localStorage.setItem("lastUserId", currentUserId);
+    }
+  }, [user, dispatch]);
 
   // セッション切れでログインページに戻される場合、state経由でメッセージを渡す
   if (!isAuthenticated) {

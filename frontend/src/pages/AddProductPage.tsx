@@ -5,6 +5,7 @@ import PageContainer from "@components/layout/PageContainer";
 import ProductForm, { ProductFormData } from "@components/products/ProductForm";
 import { useProducts } from "@features/products/hooks/useProducts";
 import ErrorAlert from "@components/common/ErrorAlert";
+import EcommerceSearchSpinner from "@components/common/EcommerceSearchSpinner";
 
 const AddProductPage: React.FC = () => {
   const { registerProduct, loading, error } = useProducts();
@@ -71,7 +72,11 @@ const AddProductPage: React.FC = () => {
 
           <ErrorAlert error={error} severity={getErrorSeverity()} />
 
-          <ProductForm onSubmit={handleSubmit} isLoading={loading} />
+          {loading ? (
+            <EcommerceSearchSpinner message="商品情報を取得中です..." />
+          ) : (
+            <ProductForm onSubmit={handleSubmit} isLoading={loading} />
+          )}
         </>
       )}
     </PageContainer>
