@@ -348,5 +348,11 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': True,
         },
+        'notifications': {
+            'handlers': ['console'],
+            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
     },
 }

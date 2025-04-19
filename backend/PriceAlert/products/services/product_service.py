@@ -66,9 +66,8 @@ class ProductService:
             with transaction.atomic():
                 for product_info in all_product_infos:
                     saved_product, created = sds.save_product(product_info)
-                    if created:
-                        saved_products.append(saved_product)
-                        stats['new_products'] += 1
+                    stats['new_products'] += 1 if created else 0
+                    saved_products.append(saved_product)
 
                     saved_product_on_ec_site, created, is_price_changed = sds.save_product_on_ec_site_and_price_history(saved_product, product_info)
                     stats['new_ec_sites'] += 1 if created else 0

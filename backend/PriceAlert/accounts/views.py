@@ -13,6 +13,7 @@ import uuid
 
 from .serializers import UserSerializer, RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 from .models import User, PasswordResetToken
+from users.models import Settings
 
 
 class RegisterView(APIView):
@@ -22,9 +23,12 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
+        user_serializer = RegisterSerializer(data=request.data)
+        if user_serializer.is_valid():
+            # ユーザーを作成
+            user = user_serializer.save()
+            
+            # JWTトークンを生成
             refresh = RefreshToken.for_user(user) # type: ignore
             
             response_data = {
@@ -34,7 +38,7 @@ class RegisterView(APIView):
             }
             
             return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):

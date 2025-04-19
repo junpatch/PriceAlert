@@ -85,7 +85,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         
         # 既読・未読フィルター
         if is_read:
-            is_read_bool = is_read.lower() == 'true'
+            is_read_bool = str(is_read).lower() == 'true'
             queryset = queryset.filter(is_read=is_read_bool)
             
         return queryset
