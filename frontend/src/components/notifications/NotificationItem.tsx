@@ -30,7 +30,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     id,
     type,
     message,
-    product_id,
+    product,
     old_price,
     new_price,
     is_read,
@@ -94,7 +94,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       secondaryAction={
         <IconButton
           component={Link}
-          to={`/products/${product_id}`}
+          to={`/products/${product.id}`}
           edge="end"
           aria-label="詳細"
         >

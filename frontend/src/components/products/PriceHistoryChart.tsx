@@ -263,6 +263,14 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     );
   }, [filteredData, selectedEcSite]);
 
+  // 価格がnullのデータを除外
+  const validPriceData = useMemo(() => {
+    return ecSiteFilteredData.filter((item) => {
+      const price = priceType === "price" ? item.price : item.effective_price;
+      return price !== null && price !== undefined;
+    });
+  }, [ecSiteFilteredData, priceType]);
+
   // 利用可能なECサイトのリストを取得
   const availableEcSites = useMemo(() => {
     const sites = new Set<string>();
@@ -277,7 +285,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     const siteMap = new Map<string, PriceHistory>();
 
     // 各ECサイトの最新価格を取得
-    ecSiteFilteredData.forEach((item) => {
+    validPriceData.forEach((item) => {
       const key = `${item.product_on_ec_site.ec_site.name}-${item.product_on_ec_site.seller_name}`;
       const existing = siteMap.get(key);
       if (
@@ -296,16 +304,20 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
         return priceA - priceB;
       })
       .slice(0, 5); // 上位5件のみ
-  }, [ecSiteFilteredData, priceType]);
+  }, [validPriceData, priceType]);
 
   // グラフ用のデータを整形
   const chartData = useMemo(() => {
     const dateMap = new Map<string, any>();
 
     // 日付ごとのデータを集計
-    ecSiteFilteredData.forEach((item) => {
+    validPriceData.forEach((item) => {
       const date = new Date(item.captured_at).toLocaleDateString("ja-JP");
       const key = `${item.product_on_ec_site.ec_site.name}-${item.product_on_ec_site.seller_name}`;
+      const price = priceType === "price" ? item.price : item.effective_price;
+
+      // 価格がnullまたはundefinedの場合は追加しない（念のための確認）
+      if (price === null || price === undefined) return;
 
       if (!dateMap.has(date)) {
         dateMap.set(date, {
@@ -315,7 +327,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
       }
 
       const data = dateMap.get(date);
-      data[key] = priceType === "price" ? item.price : item.effective_price;
+      data[key] = price;
     });
 
     // 各ECサイトの最新価格点を追加（現在価格）
@@ -332,13 +344,19 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
       sortedSites.forEach((site) => {
         const key = `${site.product_on_ec_site.ec_site.name}-${site.product_on_ec_site.seller_name}`;
         const data = dateMap.get(latestDate);
+        let price;
 
         if (site.product_on_ec_site.current_price) {
-          data[key] =
+          price =
             priceType === "price"
               ? site.product_on_ec_site.current_price
               : site.product_on_ec_site.effective_price ||
                 site.product_on_ec_site.current_price;
+
+          // 価格がnullまたはundefinedの場合は追加しない
+          if (price !== null && price !== undefined) {
+            data[key] = price;
+          }
         }
       });
     }
@@ -347,7 +365,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     return Array.from(dateMap.values()).sort(
       (a, b) => a.timestamp - b.timestamp
     );
-  }, [ecSiteFilteredData, priceType, sortedSites]);
+  }, [validPriceData, priceType, sortedSites]);
 
   // X軸の表示範囲に基づいたデータ
   const displayedChartData = useMemo(() => {
@@ -360,19 +378,25 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
   // データセットが変わったら表示範囲をリセット
   useEffect(() => {
     setXAxisRange(null);
-  }, [ecSiteFilteredData, timeRange, selectedEcSite]);
+  }, [validPriceData, timeRange, selectedEcSite]);
 
   // 価格範囲を計算
-  const priceMin = Math.min(
-    ...sortedSites.map((item) =>
-      priceType === "price" ? item.price : item.effective_price
-    )
-  );
-  const priceMax = Math.max(
-    ...sortedSites.map((item) =>
-      priceType === "price" ? item.price : item.effective_price
-    )
-  );
+  const priceMin =
+    sortedSites.length > 0
+      ? Math.min(
+          ...sortedSites.map((item) =>
+            priceType === "price" ? item.price : item.effective_price
+          )
+        )
+      : 0;
+  const priceMax =
+    sortedSites.length > 0
+      ? Math.max(
+          ...sortedSites.map((item) =>
+            priceType === "price" ? item.price : item.effective_price
+          )
+        )
+      : 0;
 
   // 余白を追加
   const yAxisMin = Math.max(0, Math.floor(priceMin * 0.95));

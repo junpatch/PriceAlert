@@ -95,9 +95,9 @@ export interface UserProduct {
 // 通知関連
 export interface Notification {
   id: number;
-  user_id: number;
-  product_id: number;
-  product_on_ec_site_id: number;
+  user: User;
+  product: Product;
+  product_on_ec_site: ProductOnECSite;
   type: string;
   message: string;
   old_price?: number;
