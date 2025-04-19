@@ -229,7 +229,7 @@ export const api = createApi({
         },
       }),
     }),
-    registerProduct: builder.mutation<UserProduct, { url: string; price_threshold?: number; }>({
+    registerProduct: builder.mutation<UserProduct, { url?: string; jan_code?: string; price_threshold?: number; }>({
       query: (productData) => ({
         url: 'user-products/',
         method: 'POST',

@@ -78,7 +78,12 @@ export const useProducts = () => {
 
   const handleRegisterProduct = async (url: string, priceThreshold?: number) => {
     try {
-      await registerProduct({ url, price_threshold: priceThreshold }).unwrap();
+      if (url.startsWith('jan_code=')) {
+        const janCode = url.replace('jan_code=', '');
+        await registerProduct({ jan_code: janCode, price_threshold: priceThreshold }).unwrap();
+      } else {
+        await registerProduct({ url, price_threshold: priceThreshold }).unwrap();
+      }
     } catch (err: any) {
       let errorMessage = '商品の登録に失敗しました';
       
