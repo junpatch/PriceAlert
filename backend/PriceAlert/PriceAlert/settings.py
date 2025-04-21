@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     
     # 自作アプリ
+    "PriceAlert",  # プロジェクト自体をアプリとして追加
     "accounts",
     "users",
     "products",
@@ -215,9 +216,17 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ] 
 
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'  # RedisがBroker
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_BROKER_URL = 'memory://'  # または 'rpc://'
+# Celery設定
+CELERY_BROKER_URL = os.getenv('REDIS_URL')  # RedisがBroker
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL')
+
+# デバッグ用のローカルRedis接続設定（環境変数がない場合のフォールバック）
+if not CELERY_BROKER_URL:
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+if not CELERY_RESULT_BACKEND:
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# CELERY_BROKER_URL = 'memory://'  # または 'rpc://'
 CELERY_TASK_ALWAYS_EAGER = True  # タスクを即座に実行（同期処理）
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
