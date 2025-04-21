@@ -1,23 +1,50 @@
-import React from 'react';
-import { Container, Typography, Box, Paper } from '@mui/material';
+import React from "react";
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
 
 interface PageContainerProps {
   title: string;
   children: React.ReactNode;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
   subTitle?: string;
 }
 
 const PageContainer: React.FC<PageContainerProps> = ({
   title,
   children,
-  maxWidth = 'lg',
+  maxWidth = "lg",
   subTitle,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
-    <Container maxWidth={maxWidth} sx={{ py: 3 }}>
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Container
+      maxWidth={maxWidth}
+      sx={{
+        py: { xs: 1, sm: 2, md: 3 },
+        px: { xs: 1, sm: 2, md: 3 },
+      }}
+      disableGutters={isMobile}
+    >
+      <Paper
+        sx={{
+          p: { xs: 1.5, sm: 2, md: 3 },
+          mb: { xs: 2, sm: 3, md: 4 },
+          boxShadow: { xs: 0, sm: 1 }, // モバイル表示時はシャドウを消して余白減少
+        }}
+      >
+        <Typography
+          variant={isMobile ? "h5" : "h4"}
+          component="h1"
+          gutterBottom
+        >
           {title}
         </Typography>
         {subTitle && (
@@ -25,10 +52,10 @@ const PageContainer: React.FC<PageContainerProps> = ({
             {subTitle}
           </Typography>
         )}
-        <Box sx={{ mt: 3 }}>{children}</Box>
+        <Box sx={{ mt: isMobile ? 1.5 : 3 }}>{children}</Box>
       </Paper>
     </Container>
   );
 };
 
-export default PageContainer; 
+export default PageContainer;

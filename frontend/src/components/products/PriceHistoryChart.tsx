@@ -57,16 +57,20 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [focusEndDate, setFocusEndDate] = useState<boolean>(false);
+  const [startDatePickerOpen, setStartDatePickerOpen] =
+    useState<boolean>(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState<boolean>(false);
+  const [currentPickerType, setCurrentPickerType] = useState<
+    "start" | "end" | null
+  >(null);
   const [showZoomSnackbar, setShowZoomSnackbar] = useState<boolean>(false);
   const [showZoomGuide, setShowZoomGuide] = useState<boolean>(false);
   const [xAxisRange, setXAxisRange] = useState<{
     start: number;
     end: number;
   } | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
-  const endDateRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
   // アニメーション設定
@@ -75,19 +79,19 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     transform: showZoomGuide ? "scale(1)" : "scale(0.8)",
   });
 
-  // 開始日が選択されたら終了日にフォーカス
+  // 画面サイズに応じた設定
   useEffect(() => {
-    if (customStartDate && focusEndDate && endDateRef.current) {
-      setTimeout(() => {
-        const input = endDateRef.current?.querySelector("input");
-        if (input) {
-          input.focus();
-          setEndDatePickerOpen(true); // 終了日のカレンダーを自動的に開く
-          setFocusEndDate(false);
-        }
-      }, 100);
-    }
-  }, [customStartDate, focusEndDate]);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 600);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
 
   // ズームガイドの表示
   useEffect(() => {
@@ -327,16 +331,16 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
 
     // 各ECサイトの最新価格点を追加（現在価格）
     if (sortedSites.length > 0) {
-      const latestDate = new Date().toLocaleDateString("ja-JP");
-
-      if (!dateMap.has(latestDate)) {
-        dateMap.set(latestDate, {
-          date: latestDate,
-          timestamp: new Date().getTime(),
-        });
-      }
-
       sortedSites.forEach((site) => {
+        const latestDate = new Date(site.product_on_ec_site.updated_at).toLocaleDateString("ja-JP");
+
+        if (!dateMap.has(latestDate)) {
+          dateMap.set(latestDate, {
+            date: latestDate,
+            timestamp: new Date(site.product_on_ec_site.updated_at).getTime(),
+          });
+        }
+
         const key = `${site.product_on_ec_site.ec_site.name}-${site.product_on_ec_site.seller_name}`;
         const data = dateMap.get(latestDate);
         let price;
@@ -434,6 +438,11 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
 
       if (dummyEvent.currentTarget) {
         handleCustomDateClick(dummyEvent);
+        // 開始日のカレンダーを自動的に開く
+        setTimeout(() => {
+          setCurrentPickerType("start");
+          setStartDatePickerOpen(true);
+        }, 100);
       }
     }
   };
@@ -460,26 +469,58 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     return `¥${price.toLocaleString()}`;
   };
 
+  // 日付範囲を設定するポップアップを表示
   const handleCustomDateClick = (
     event: React.MouseEvent<HTMLButtonElement>
   ) => {
     setAnchorEl(event.currentTarget);
   };
 
+  // ポップアップを閉じる
   const handleCustomDateClose = () => {
     setAnchorEl(null);
   };
 
+  // 日付範囲を適用してグラフを更新
   const handleApplyCustomDates = () => {
     setTimeRange("custom");
     setAnchorEl(null);
   };
 
+  // 開始日カレンダー用の入力フィールドがクリックされたときの処理
+  const handleStartDateInputClick = () => {
+    setCurrentPickerType("start");
+    setStartDatePickerOpen(true);
+    setEndDatePickerOpen(false);
+  };
+
+  // 終了日カレンダー用の入力フィールドがクリックされたときの処理
+  const handleEndDateInputClick = () => {
+    setCurrentPickerType("end");
+    setEndDatePickerOpen(true);
+    setStartDatePickerOpen(false);
+  };
+
+  // 開始日の変更処理
   const handleStartDateChange = (newValue: Date | null) => {
     setCustomStartDate(newValue);
-    // 開始日が設定されたら終了日にフォーカス
+    // 開始日が選択されたら、カレンダーを閉じ、終了日カレンダーを開く
     if (newValue) {
-      setFocusEndDate(true);
+      setStartDatePickerOpen(false);
+      setTimeout(() => {
+        setCurrentPickerType("end");
+        setEndDatePickerOpen(true);
+      }, 100);
+    }
+  };
+
+  // 終了日の変更処理
+  const handleEndDateChange = (newValue: Date | null) => {
+    setCustomEndDate(newValue);
+    // 終了日が選択されたら、カレンダーを閉じて変更を適用
+    if (newValue) {
+      setEndDatePickerOpen(false);
+      handleApplyCustomDates();
     }
   };
 
@@ -490,60 +531,103 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
   const colors = ["#1976d2", "#f50057", "#4caf50", "#ff9800", "#9c27b0"];
 
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
+    <Paper sx={{ p: { xs: 1, sm: 2, md: 3 }, mb: { xs: 2, sm: 3 } }}>
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           mb: 2,
-          flexWrap: { xs: "wrap", md: "nowrap" },
-          gap: 2,
+          flexDirection: { xs: "column", md: "row" },
+          gap: { xs: 1, md: 2 },
         }}
       >
-        <Typography variant="h6">価格履歴</Typography>
+        <Typography
+          variant="h6"
+          sx={{
+            fontSize: { xs: "1rem", sm: "1.25rem" },
+            whiteSpace: { md: "nowrap" }, // PC表示時に「価格履歴」が改行されないように
+          }}
+        >
+          価格履歴
+        </Typography>
 
         <Box
           sx={{
             display: "flex",
-            gap: 2,
-            flexWrap: { xs: "wrap", md: "nowrap" },
+            gap: { xs: 1, md: 2 },
+            flexWrap: "wrap",
             justifyContent: { xs: "flex-start", md: "flex-end" },
-            width: { xs: "100%", md: "auto" },
+            width: "100%",
           }}
         >
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>ECサイト</InputLabel>
-            <Select
-              value={selectedEcSite}
-              label="ECサイト"
-              onChange={handleEcSiteChange}
-            >
-              <MenuItem value="all">すべて</MenuItem>
-              {availableEcSites.map((site) => (
-                <MenuItem key={site} value={site}>
-                  {site}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <ToggleButtonGroup
-            value={priceType}
-            exclusive
-            onChange={handlePriceTypeChange}
-            size="small"
+          {/* モバイル表示では横に並べるボタンを縦に配置 */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
+              width: { xs: "100%", sm: "auto" },
+            }}
           >
-            <ToggleButton value="price">表示価格</ToggleButton>
-            <ToggleButton value="effective_price">実質価格</ToggleButton>
-          </ToggleButtonGroup>
+            <FormControl
+              size="small"
+              sx={{ minWidth: { xs: "100%", sm: 120 } }}
+            >
+              <InputLabel>ECサイト</InputLabel>
+              <Select
+                value={selectedEcSite}
+                label="ECサイト"
+                onChange={handleEcSiteChange}
+              >
+                <MenuItem value="all">すべて</MenuItem>
+                {availableEcSites.map((site) => (
+                  <MenuItem key={site} value={site}>
+                    {site}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <ToggleButtonGroup
+              value={priceType}
+              exclusive
+              onChange={handlePriceTypeChange}
+              size="small"
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+            >
+              <ToggleButton value="price" sx={{ flex: 1 }}>
+                表示価格
+              </ToggleButton>
+              <ToggleButton value="effective_price" sx={{ flex: 1 }}>
+                実質価格
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: { xs: "100%", sm: "auto" },
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
+            }}
+          >
             <ToggleButtonGroup
               value={timeRange}
               exclusive
               onChange={handleTimeRangeChange}
               size="small"
+              sx={{
+                width: { xs: "100%", sm: "auto" },
+                flexWrap: { xs: "wrap", sm: "nowrap" },
+                "& .MuiToggleButton-root": {
+                  flex: { xs: 1, sm: "none" },
+                  padding: { xs: "4px 8px", sm: "5px 12px" },
+                  fontSize: { xs: "0.7rem", sm: "0.8rem" },
+                },
+              }}
             >
               <ToggleButton value="7days">1週間</ToggleButton>
               <ToggleButton value="1month">1ヶ月</ToggleButton>
@@ -564,12 +648,16 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
                 カスタム
               </ToggleButton>
             </ToggleButtonGroup>
+            {/* モバイル時はフィルタアイコンを非表示 */}
             <IconButton
               size="small"
               onClick={handleCustomButtonClick}
               color="primary"
               aria-describedby={customDateId}
-              sx={{ ml: 0.5 }}
+              sx={{
+                alignSelf: { xs: "flex-end", sm: "center" },
+                display: { xs: "none", sm: "inline-flex" }, // モバイルでは非表示
+              }}
             >
               <FilterAltIcon fontSize="small" />
             </IconButton>
@@ -592,37 +680,48 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
         }}
       >
         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ja}>
-          <Box sx={{ p: 2, width: 300 }}>
+          <Box sx={{ p: 2, width: { xs: 280, sm: 300 } }}>
             <Typography variant="subtitle1" gutterBottom>
-              日付範囲を選択
+              {currentPickerType === "start"
+                ? "開始日を選択"
+                : currentPickerType === "end"
+                ? "終了日を選択"
+                : "日付範囲を選択"}
             </Typography>
             <Stack spacing={2} mt={2}>
               <DatePicker
                 label="開始日"
                 value={customStartDate}
                 onChange={handleStartDateChange}
-                slotProps={{ textField: { size: "small", fullWidth: true } }}
+                open={startDatePickerOpen}
+                onClose={() => setStartDatePickerOpen(false)}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true,
+                    onClick: handleStartDateInputClick,
+                  },
+                  field: { clearable: false },
+                  actionBar: { actions: [] },
+                }}
               />
-              <Box ref={endDateRef}>
-                <DatePicker
-                  label="終了日"
-                  value={customEndDate}
-                  open={endDatePickerOpen}
-                  onClose={() => setEndDatePickerOpen(false)}
-                  onChange={(newValue: Date | null) =>
-                    setCustomEndDate(newValue)
-                  }
-                  slotProps={{ textField: { size: "small", fullWidth: true } }}
-                  minDate={customStartDate || undefined}
-                />
-              </Box>
-              <Button
-                variant="contained"
-                onClick={handleApplyCustomDates}
-                fullWidth
-              >
-                適用
-              </Button>
+              <DatePicker
+                label="終了日"
+                value={customEndDate}
+                onChange={handleEndDateChange}
+                open={endDatePickerOpen}
+                onClose={() => setEndDatePickerOpen(false)}
+                slotProps={{
+                  textField: {
+                    size: "small",
+                    fullWidth: true,
+                    onClick: handleEndDateInputClick,
+                  },
+                  field: { clearable: false },
+                  actionBar: { actions: [] },
+                }}
+                minDate={customStartDate || undefined}
+              />
             </Stack>
           </Box>
         </LocalizationProvider>
@@ -637,7 +736,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
         <Box
           ref={chartRef}
           sx={{
-            height: 400,
+            height: { xs: 300, sm: 350, md: 400 },
             position: "relative",
             overflow: "hidden",
           }}
@@ -675,34 +774,54 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
               data={displayedChartData}
               margin={{
                 top: 5,
-                right: 30,
-                left: 20,
+                right: 10,
+                left: 0,
                 bottom: 5,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                label={{
-                  value: "日付",
-                  position: "insideBottomRight",
-                  offset: -10,
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tickFormatter={(value) => {
+                  // モバイル表示では簡略化された日付表示
+                  if (isMobile) {
+                    const parts = value.split("/");
+                    return parts.length > 1 ? `${parts[1]}/${parts[2]}` : value;
+                  }
+                  return value;
                 }}
               />
               <YAxis
                 domain={[yAxisMin, yAxisMax]}
-                tickFormatter={formatPrice}
-                label={{
-                  value: "価格 (円)",
-                  angle: -90,
-                  position: "insideLeft",
-                }}
+                tickFormatter={(value) => formatPrice(value)}
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                width={50}
               />
               <Tooltip
                 formatter={(value: number) => formatPrice(value)}
                 labelFormatter={(label) => `日付: ${label}`}
+                contentStyle={{ fontSize: isMobile ? 12 : 14 }}
               />
-              <Legend />
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{
+                  fontSize: isMobile ? "10px" : "12px",
+                  marginTop: "10px",
+                }}
+                iconSize={8}
+                formatter={(value) => {
+                  // モバイル向けに長いECサイト名を短くする
+                  if (isMobile) {
+                    // 「(販売者名)」の部分を削除
+                    const parts = value.split(" (");
+                    return parts[0];
+                  }
+                  return value;
+                }}
+              />
               {sortedSites.map((site, index) => {
                 const key = `${site.product_on_ec_site.ec_site.name}-${site.product_on_ec_site.seller_name}`;
                 const isCheapest = index === 0;
@@ -717,9 +836,10 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
                     type="stepAfter"
                     dataKey={key}
                     stroke={colors[index % colors.length]}
-                    strokeWidth={isCheapest ? 3 : 2}
+                    strokeWidth={isCheapest ? 2 : 1}
                     dot={false}
-                    activeDot={{ r: 8 }}
+                    activeDot={{ r: 6 }}
+                    connectNulls={true}
                   />
                 );
               })}
@@ -731,6 +851,7 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
                   stroke="#ff7300"
                   strokeDasharray="5 5"
                   dot={false}
+                  strokeWidth={1}
                 />
               )}
             </LineChart>

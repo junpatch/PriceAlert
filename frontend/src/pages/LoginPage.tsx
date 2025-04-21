@@ -160,7 +160,7 @@ const LoginPage: React.FC = () => {
             {loading ? "ログイン中..." : "ログイン"}
           </Button>
           <Grid container>
-            <Grid item xs>
+            <Grid item>
               <Link to="/forgot-password" style={{ textDecoration: "none" }}>
                 パスワードをお忘れですか？
               </Link>

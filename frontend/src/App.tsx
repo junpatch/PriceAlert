@@ -52,12 +52,81 @@ const theme = createTheme({
       '"Segoe UI Emoji"',
       '"Segoe UI Symbol"',
     ].join(","),
+    // モバイル向けにフォントサイズを調整
+    h4: {
+      fontSize: "1.75rem",
+      "@media (max-width:600px)": {
+        fontSize: "1.4rem",
+      },
+    },
+    h5: {
+      fontSize: "1.5rem",
+      "@media (max-width:600px)": {
+        fontSize: "1.25rem",
+      },
+    },
+    h6: {
+      fontSize: "1.25rem",
+      "@media (max-width:600px)": {
+        fontSize: "1.1rem",
+      },
+    },
+    body1: {
+      "@media (max-width:600px)": {
+        fontSize: "0.95rem",
+      },
+    },
+    body2: {
+      "@media (max-width:600px)": {
+        fontSize: "0.85rem",
+      },
+    },
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: "none",
+        },
+        // モバイル向けにボタンサイズ最適化
+        sizeSmall: {
+          padding: "4px 10px",
+          fontSize: "0.8125rem",
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          "@media (max-width:600px)": {
+            boxShadow: "0px 2px 4px -1px rgba(0,0,0,0.1)",
+          },
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          "@media (max-width:600px)": {
+            padding: "12px",
+            "&:last-child": {
+              paddingBottom: "12px",
+            },
+          },
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          "@media (max-width:600px)": {
+            padding: "8px 6px",
+          },
+        },
+        sizeSmall: {
+          "@media (max-width:600px)": {
+            padding: "6px 4px",
+          },
         },
       },
     },

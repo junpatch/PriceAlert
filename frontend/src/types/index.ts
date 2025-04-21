@@ -144,8 +144,12 @@ export interface UIState {
 
 // 設定関連
 export interface UserSettings {
-  notification_frequency: 'immediately' | 'daily' | 'weekly';
+  id: number;
+  email_frequency: 'immediately' | 'daily' | 'weekly';
   email_notifications: boolean;
+  user: User;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SettingsState {
