@@ -20,7 +20,6 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  Button,
   IconButton,
   Popover,
   Stack,
@@ -332,7 +331,9 @@ const PriceHistoryChart: React.FC<PriceHistoryChartProps> = ({
     // 各ECサイトの最新価格点を追加（現在価格）
     if (sortedSites.length > 0) {
       sortedSites.forEach((site) => {
-        const latestDate = new Date(site.product_on_ec_site.updated_at).toLocaleDateString("ja-JP");
+        const latestDate = new Date(
+          site.product_on_ec_site.updated_at
+        ).toLocaleDateString("ja-JP");
 
         if (!dateMap.has(latestDate)) {
           dateMap.set(latestDate, {

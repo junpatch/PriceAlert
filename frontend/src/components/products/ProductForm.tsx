@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Box,
   TextField,
@@ -6,13 +6,12 @@ import {
   InputAdornment,
   Paper,
   Typography,
-  Slider,
   FormControl,
   FormHelperText,
-} from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
-import * as yup from 'yup';
-import { yupResolver } from '@hookform/resolvers/yup';
+} from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 interface ProductFormProps {
   onSubmit: (data: ProductFormData) => void;
@@ -27,15 +26,15 @@ export interface ProductFormData {
 const schema = yup.object().shape({
   url: yup
     .string()
-    .required('URLは必須です')
-    .url('有効なURLを入力してください')
-    .max(1024, 'URLは1024文字以内で入力してください'),
+    .required("URLは必須です")
+    .url("有効なURLを入力してください")
+    .max(1024, "URLは1024文字以内で入力してください"),
   price_threshold: yup
     .number()
     .transform((value) => (isNaN(value) ? undefined : value))
     .nullable()
-    .min(1, '価格は1円以上で設定してください')
-    .max(10000000, '価格は1000万円以下で設定してください'),
+    .min(1, "価格は1円以上で設定してください")
+    .max(10000000, "価格は1000万円以下で設定してください"),
 });
 
 const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, isLoading }) => {
@@ -43,11 +42,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, isLoading }) => {
     control,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<ProductFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
-      url: '',
+      url: "",
       price_threshold: undefined,
     },
   });
@@ -80,13 +78,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, isLoading }) => {
         />
 
         <Box sx={{ mt: 3, mb: 1 }}>
-          <Typography gutterBottom>
-            価格アラート設定（任意）
-          </Typography>
+          <Typography gutterBottom>価格アラート設定（任意）</Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             この価格以下になったら通知します
           </Typography>
-          
+
           <FormControl fullWidth error={!!errors.price_threshold}>
             <Controller
               name="price_threshold"
@@ -100,7 +96,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, isLoading }) => {
                   label="目標価格"
                   type="number"
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">¥</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">¥</InputAdornment>
+                    ),
                   }}
                   error={!!errors.price_threshold}
                   disabled={isLoading}
@@ -120,11 +118,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSubmit, isLoading }) => {
           sx={{ mt: 3, mb: 2 }}
           disabled={isLoading}
         >
-          {isLoading ? '登録中...' : '商品を登録'}
+          {isLoading ? "登録中..." : "商品を登録"}
         </Button>
       </Box>
     </Paper>
   );
 };
 
-export default ProductForm; 
+export default ProductForm;

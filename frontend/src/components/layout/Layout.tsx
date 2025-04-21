@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Box,
-  CssBaseline,
-  Toolbar,
-  useTheme,
-  useMediaQuery,
-} from "@mui/material";
+import { Box, CssBaseline, Toolbar } from "@mui/material";
 import Header from "./Header";
 import Footer from "./Footer";
 import { useAppSelector } from "@hooks/index";
@@ -17,8 +11,6 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isLoading } = useAppSelector((state) => state.ui);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <Box

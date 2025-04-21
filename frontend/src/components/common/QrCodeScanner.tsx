@@ -6,27 +6,21 @@ import CameraAltIcon from "@mui/icons-material/CameraAlt";
 interface QrCodeScannerProps {
   fps?: number;
   aspectRatio?: number;
-  disableFlip?: boolean;
   onScan: (decodedText: string) => void;
   onError?: (errorMessage: string) => void;
-  width?: string | number;
   height?: string | number;
 }
 
 const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   fps = 10,
   aspectRatio = 1.0,
-  disableFlip = false,
   onScan,
   onError,
-  width = "100%",
   height = 300,
 }) => {
   const qrReaderRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // 安全にスキャナーを停止する関数
   const safelyStopScanner = async () => {
@@ -47,7 +41,6 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     if (qrReaderRef.current) {
       const width = qrReaderRef.current.clientWidth;
       const height = qrReaderRef.current.clientHeight;
-      setContainerSize({ width, height });
       return { width, height };
     }
     return { width: 300, height: 300 };
@@ -156,7 +149,6 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     try {
       // QRコードスキャナーを初期化
       scannerRef.current = new Html5Qrcode(qrId);
-      setIsInitialized(true);
 
       try {
         // カメラを検出

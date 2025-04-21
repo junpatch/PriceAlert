@@ -14,9 +14,6 @@ import {
   TableHead,
   TableRow,
   Button,
-  TextField,
-  Switch,
-  FormControlLabel,
   Chip,
   Link,
   useTheme,
@@ -24,7 +21,6 @@ import {
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
-  Save as SaveIcon,
   ShoppingCart as ShoppingCartIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,

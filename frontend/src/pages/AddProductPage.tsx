@@ -50,13 +50,12 @@ const a11yProps = (index: number) => {
 };
 
 const AddProductPage: React.FC = () => {
-  const { registerProduct, loading, error } = useProducts();
+  const { registerProduct, error } = useProducts();
   const navigate = useNavigate();
   const [success, setSuccess] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [janCode, setJanCode] = useState("");
   const [scannerActive, setScannerActive] = useState(true);
-  const [scannerError, setScannerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pageReady, setPageReady] = useState(false);
 
@@ -130,7 +129,6 @@ const AddProductPage: React.FC = () => {
 
   const handleScanError = (errorMessage: string) => {
     console.error("バーコードスキャンエラー:", errorMessage);
-    setScannerError(errorMessage);
   };
 
   const getErrorSeverity = (): "error" | "warning" | "info" => {
@@ -231,7 +229,6 @@ const AddProductPage: React.FC = () => {
                           onScan={handleScan}
                           onError={handleScanError}
                           height={300}
-                          width="100%"
                         />
                         <Typography
                           variant="body2"

@@ -13,7 +13,6 @@ import {
 import {
   NotificationsNone as NotificationsIcon,
   DoneAll as DoneAllIcon,
-  FilterAlt as FilterIcon,
 } from "@mui/icons-material";
 import PageContainer from "@components/layout/PageContainer";
 import NotificationItem from "@components/notifications/NotificationItem";
