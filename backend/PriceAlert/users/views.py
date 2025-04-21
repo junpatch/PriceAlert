@@ -7,6 +7,7 @@ from .serializers import SettingsSerializer
 from rest_framework.decorators import action
 from accounts.serializers import UserSerializer
 
+
 class UserViewSet(viewsets.ViewSet):
     """
     ユーザー情報の取得と更新
@@ -48,7 +49,7 @@ class SettingsView(viewsets.ViewSet):
             serializer = SettingsSerializer(settings)
             return Response(serializer.data)
         elif request.method == 'PATCH':
-            serializer = SettingsSerializer(settings, data=request.data, partial=True)
+            serializer = SettingsSerializer(settings, data=request.data, partial=True, context={'request': request})
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)

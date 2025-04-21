@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ title }}</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #4a90e2;
+        color: white;
+        padding: 15px;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 0 0 5px 5px;
+      }
+      .notification {
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-left: 4px solid #4a90e2;
+        border-radius: 3px;
+      }
+      .price {
+        color: #e74c3c;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>{{ title }}</h1>
+    </div>
+    <div class="content">
+      <p>{{ user.username }} 様</p>
+
+      <p>あなたがウォッチしている商品の価格が変動しました。</p>
+
+      <h2>価格変動がありました（{{ notifications_count }}件）</h2>
+
+      {% for notification in notifications %}
+      <div class="notification">
+        <h3>{{ notification.product.name }}</h3>
+        <p>{{ notification.message }}</p>
+        <p>販売サイト: {{ notification.product_on_ec_site.seller_name }}</p>
+        <p>通知タイプ: {{ notification.get_notification_type_display }}</p>
+        <p>通知日時: {{ notification.created_at|date:"Y年m月d日 H:i" }}</p>
+        <p>
+          <a href="{{ notification.product_on_ec_site.product_url }}" target="_blank"
+            >商品ページを見る</a
+          >
+        </p>
+      </div>
+      {% endfor %}
+
+      <p>
+        価格はPriceAlertサービスで自動的に取得しており、実際の価格と異なる場合があります。
+      </p>
+      <p>価格変動の詳細はPriceAlertのサイトでご確認ください。</p>
+    </div>
+    <div class="footer">
+      <p>このメールは自動送信されています。返信しないでください。</p>
+      <p>
+        通知設定の変更は<a href="{{ frontend_url }}/settings">こちら</a
+        >から行えます。
+      </p>
+      <p>&copy; {% now "Y" %} PriceAlert</p>
+    </div>
+  </body>
+</html>

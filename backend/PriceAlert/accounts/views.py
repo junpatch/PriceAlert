@@ -13,7 +13,6 @@ import uuid
 
 from .serializers import UserSerializer, RegisterSerializer, LoginSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 from .models import User, PasswordResetToken
-from users.models import Settings
 
 
 class RegisterView(APIView):

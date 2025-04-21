@@ -53,7 +53,7 @@ class Notification(models.Model):
     old_price = models.IntegerField(null=True, blank=True)
     new_price = models.IntegerField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
-    sent_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -67,3 +67,24 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.product.name} - {self.notification_type}"
+
+# メール送信履歴モデル
+class EmailFrequency(models.Model):
+    """
+    メール送信履歴モデル
+    メール送信履歴を保存する
+    """
+    FREQUENCY_CHOICES = [
+        ('immediately', '即時'),
+        ('daily', '毎日'),
+        ('weekly', '毎週'),
+    ]
+
+    email_frequency = models.CharField(max_length=50, choices=FREQUENCY_CHOICES)
+    interval = models.IntegerField(default=0)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.email_frequency} - {self.sent_at}"
+
