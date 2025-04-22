@@ -9,18 +9,20 @@ import {
   CardContent,
   CardMedia,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import {
   Timeline as TimelineIcon,
   Notifications as NotificationsIcon,
   ShoppingCart as ShoppingCartIcon,
   Compare as CompareIcon,
+  AccountCircle as AccountCircleIcon,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 import { useAuth } from "@contexts/AuthContext";
 
 const LandingPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, demoLogin, loading } = useAuth();
   const [price, setPrice] = useState(10000);
   const [priceDecreasing, setPriceDecreasing] = useState(true);
 
@@ -50,6 +52,15 @@ const LandingPage: React.FC = () => {
 
     return () => clearInterval(interval);
   }, [priceDecreasing]);
+
+  // デモログイン処理
+  const handleDemoLogin = async () => {
+    try {
+      await demoLogin();
+    } catch (error) {
+      console.error("デモログインエラー:", error);
+    }
+  };
 
   return (
     <Box>
@@ -217,6 +228,18 @@ const LandingPage: React.FC = () => {
                     >
                       ログイン
                     </Button>
+                    <Tooltip title="機能をすぐに体験できます" arrow>
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        onClick={handleDemoLogin}
+                        disabled={loading}
+                        startIcon={<AccountCircleIcon />}
+                        sx={{ color: "white", borderColor: "white" }}
+                      >
+                        {loading ? "ログイン中..." : "デモログイン"}
+                      </Button>
+                    </Tooltip>
                   </>
                 )}
               </Stack>
@@ -494,15 +517,29 @@ const LandingPage: React.FC = () => {
             ダッシュボードへ
           </Button>
         ) : (
-          <Button
-            component={Link}
-            to="/register"
-            variant="contained"
-            size="large"
-            sx={{ mt: 2 }}
-          >
-            無料で登録する
-          </Button>
+          <>
+            <Button
+              component={Link}
+              to="/register"
+              variant="contained"
+              size="large"
+              sx={{ mt: 2, mr: 2 }}
+            >
+              無料で登録する
+            </Button>
+            <Tooltip title="機能をすぐに体験できます" arrow>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={handleDemoLogin}
+                disabled={loading}
+                startIcon={<AccountCircleIcon />}
+                sx={{ mt: 2 }}
+              >
+                {loading ? "ログイン中..." : "デモログイン"}
+              </Button>
+            </Tooltip>
+          </>
         )}
       </Container>
     </Box>

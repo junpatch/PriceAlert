@@ -71,6 +71,7 @@ const RegisterPage: React.FC = () => {
       setSuccessMessage("アカウント登録に成功しました。リダイレクトします...");
     } catch (err) {
       // エラーはuseAuthフックで処理されるので、ここでは何もしない
+      setSuccessMessage(null);
     }
   };
 

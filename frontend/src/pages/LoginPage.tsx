@@ -8,6 +8,7 @@ import {
   Paper,
   Alert,
   Grid,
+  Divider,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@contexts/AuthContext";
@@ -18,6 +19,7 @@ import ErrorAlert from "@components/common/ErrorAlert";
 import { toast } from "react-toastify";
 import { useAppDispatch } from "@hooks/index";
 import { setError } from "@features/auth/slices/authSlice";
+import { AccountCircle as AccountCircleIcon } from "@mui/icons-material";
 
 interface LoginFormData {
   email: string;
@@ -36,7 +38,7 @@ const schema = yup.object().shape({
 });
 
 const LoginPage: React.FC = () => {
-  const { login, loading, error, isAuthenticated } = useAuth();
+  const { login, demoLogin, loading, error, isAuthenticated } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const dispatch = useAppDispatch();
 
@@ -87,6 +89,20 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(data.email, data.password);
+      // 成功メッセージはisAuthenticatedの変更を検知して表示するよう変更
+    } catch (err) {
+      // エラーはuseAuthフックで処理されるので、ここでは何もしない
+      setSuccessMessage(null);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setSuccessMessage(null);
+    // エラーが出る可能性があるため、前回のエラーをクリア
+    dispatch(setError(null));
+
+    try {
+      await demoLogin();
       // 成功メッセージはisAuthenticatedの変更を検知して表示するよう変更
     } catch (err) {
       // エラーはuseAuthフックで処理されるので、ここでは何もしない
@@ -159,6 +175,20 @@ const LoginPage: React.FC = () => {
           >
             {loading ? "ログイン中..." : "ログイン"}
           </Button>
+
+          <Divider sx={{ my: 2 }}>または</Divider>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleDemoLogin}
+            disabled={loading}
+            startIcon={<AccountCircleIcon />}
+            sx={{ mb: 2 }}
+          >
+            {loading ? "ログイン中..." : "デモユーザーでログイン"}
+          </Button>
+
           <Grid container>
             <Grid item>
               <Link to="/forgot-password" style={{ textDecoration: "none" }}>

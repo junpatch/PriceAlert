@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import {
   useLoginMutation,
   useRegisterMutation,
@@ -25,7 +24,7 @@ import {
 } from "@features/auth/slices/authSlice";
 import { RootState } from "@store/index";
 import { useSelector } from "react-redux";
-import { User } from "@/types";
+import { User, AuthState } from "@/types";
 import { TokenManager } from "@/utils/tokenManager";
 import { IntervalManager } from "@/utils/intervalManager";
 import { Logger } from "@/utils/logger";
@@ -48,6 +47,7 @@ interface AuthContextType {
     confirmPassword: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  demoLogin: () => Promise<void>;
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Reduxストアから認証状態を取得
   const { user, token, isAuthenticated, loading, error } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth as AuthState
   );
 
   // APIミューテーションフックの初期化
@@ -348,9 +348,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       // ログイン成功時のリダイレクト処理
       navigate(AUTH_CONSTANTS.DASHBOARD_ROUTE, { replace: true });
     } catch (error: any) {
-      const errorMessage = ErrorHandler.formatErrorMessage(error);
+      // APIからのエラーメッセージをより詳細に処理
+      let errorMessage = ErrorHandler.formatErrorMessage(error);
+
+      if (error.data && typeof error.data === "object") {
+        // 特定のエラーメッセージフォーマットを確認
+        if (error.data.error) {
+          errorMessage = error.data.error;
+        }
+        // フィールド別のエラーメッセージを結合
+        else if (Object.keys(error.data).length > 0) {
+          const fieldErrors = error.data;
+          const messages: string[] = [];
+
+          Object.keys(fieldErrors).forEach((field) => {
+            if (Array.isArray(fieldErrors[field])) {
+              fieldErrors[field].forEach((message: string) => {
+                messages.push(`${field}: ${message}`);
+              });
+            }
+          });
+
+          if (messages.length > 0) {
+            errorMessage = messages.join("\n");
+          }
+        }
+      }
+
       dispatch(setError(errorMessage));
-      toast.error(errorMessage);
+      return Promise.reject(new Error(errorMessage));
     } finally {
       dispatch(setLoading(false));
     }
@@ -370,8 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (password !== confirmPassword) {
         const errorMessage = "パスワードが一致しません";
         dispatch(setError(errorMessage));
-        toast.error(errorMessage);
-        return;
+        return Promise.reject(new Error(errorMessage));
       }
 
       const result = await register({
@@ -381,6 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         confirmPassword,
       }).unwrap();
 
+      // 登録成功した場合のみログインして遷移する
       dispatch(
         loginSuccess({
           user: result.user,
@@ -391,11 +417,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // 登録成功時のリダイレクト処理
       navigate(AUTH_CONSTANTS.DASHBOARD_ROUTE, { replace: true });
-      toast.success("アカウント登録が完了しました");
+      return Promise.resolve();
+    } catch (error: any) {
+      // APIからのエラーメッセージをより詳細に処理
+      let errorMessage = ErrorHandler.formatErrorMessage(error);
+
+      if (error.data && typeof error.data === "object") {
+        // フィールド別のエラーメッセージを結合
+        const fieldErrors = error.data;
+        const messages: string[] = [];
+
+        Object.keys(fieldErrors).forEach((field) => {
+          if (Array.isArray(fieldErrors[field])) {
+            fieldErrors[field].forEach((message: string) => {
+              messages.push(`${field}: ${message}`);
+            });
+          }
+        });
+
+        if (messages.length > 0) {
+          errorMessage = messages.join("\n");
+        }
+      }
+
+      dispatch(setError(errorMessage));
+      return Promise.reject(new Error(errorMessage));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  // デモユーザーログイン処理
+  const handleDemoLogin = async () => {
+    try {
+      dispatch(setLoading(true));
+      const result = await login({
+        email: "test3146@testtest.com",
+        password: "#Test1234",
+      }).unwrap();
+
+      dispatch(
+        loginSuccess({
+          user: result.user,
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+        })
+      );
+
+      // ログイン成功時のリダイレクト処理
+      navigate(AUTH_CONSTANTS.DASHBOARD_ROUTE, { replace: true });
     } catch (error: any) {
       const errorMessage = ErrorHandler.formatErrorMessage(error);
       dispatch(setError(errorMessage));
-      toast.error(errorMessage);
+      return Promise.reject(new Error(errorMessage));
     } finally {
       dispatch(setLoading(false));
     }
@@ -406,6 +480,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     login: handleLogin,
     register: handleRegister,
     logout: () => handleLogout(false), // 通常のログアウト（APIリクエストあり）
+    demoLogin: handleDemoLogin, // デモログイン機能を追加
     user,
     isAuthenticated,
     loading,
