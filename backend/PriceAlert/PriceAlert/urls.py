@@ -15,11 +15,23 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+import os
+from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+
+# 環境に応じたベースURLを設定
+if settings.IS_PRODUCTION:
+    # 本番環境では完全なURLを指定（HTTPSスキーム）
+    # swagger_url = 'https://pricealert-tpqq.onrender.com'
+    schemes = ['https']
+else:
+    # 開発環境ではNoneに設定（相対パスを使用）
+    # swagger_url = None
+    schemes = ['http', 'https']
 
 info = openapi.Info(
     title='Forum API',
@@ -33,6 +45,7 @@ schema_view = get_schema_view(
     info,
     public=True,
     permission_classes=(permissions.AllowAny,),
+    # url=swagger_url,
 )
 
 urlpatterns = [

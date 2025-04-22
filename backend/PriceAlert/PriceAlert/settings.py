@@ -29,7 +29,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-d-sbx2!!5ovck860b%e@!_ijh4_-o+eti*1%9)!zu0l8(au()i"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 環境変数DJANGO_ENVIRONMENTに基づいて環境を判定
+ENVIRONMENT = os.getenv('DJANGO_ENVIRONMENT', 'development')
+IS_PRODUCTION = ENVIRONMENT == 'production'
+
+# 環境に応じたデバッグ設定
+# DEBUG = not IS_PRODUCTION  # 開発環境ではTrue、本番環境ではFalse
+DEBUG = True  # TODO: 最終的にはFalseにする
+
+# 本番環境の場合はセキュリティ設定を有効化
+if IS_PRODUCTION:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1年
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 ALLOWED_HOSTS = ['pricealert-tpqq.onrender.com',
                   '127.0.0.1',
@@ -97,12 +113,22 @@ WSGI_APPLICATION = "PriceAlert.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# 環境変数があればPostgreSQLを使用
+if os.getenv('DATABASE_URL'):
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -191,17 +217,27 @@ SIMPLE_JWT = {
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://price-alert-delta.vercel.app",
-    "https://pricealert-tpqq.onrender.com",
 ]
+
+# 本番環境の場合は追加の設定
+if IS_PRODUCTION:
+    CSRF_TRUSTED_ORIGINS.extend([
+        "https://price-alert-delta.vercel.app",
+        "https://pricealert-tpqq.onrender.com",
+    ])
 
 # CORS設定
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Viteの開発サーバー
     "http://127.0.0.1:5173",
-    "https://price-alert-delta.vercel.app",
-    "https://pricealert-tpqq.onrender.com",
 ]
+
+# 本番環境の場合は追加の設定
+if IS_PRODUCTION:
+    CORS_ALLOWED_ORIGINS.extend([
+        "https://price-alert-delta.vercel.app",
+        "https://pricealert-tpqq.onrender.com",
+    ])
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -242,7 +278,12 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 # メール設定（開発環境ではコンソール出力）
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@pricealert.example.com'
-FRONTEND_URL = 'http://localhost:5173'  # フロントエンドのURL
+
+# フロントエンドURL（環境に応じて変更）
+if IS_PRODUCTION:
+    FRONTEND_URL = 'https://price-alert-delta.vercel.app'
+else:
+    FRONTEND_URL = 'http://localhost:5173'  # 開発環境のフロントエンドURL
 
 # メール設定（本番環境）
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
