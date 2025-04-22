@@ -31,20 +31,6 @@ SECRET_KEY = "django-insecure-d-sbx2!!5ovck860b%e@!_ijh4_-o+eti*1%9)!zu0l8(au()i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# 本番環境かどうかを判定（Render.comではTRUE）
-IS_PRODUCTION = os.getenv('IS_PRODUCTION', 'False').lower() == 'true'
-
-# セキュリティ設定（本番環境のみ適用）
-if IS_PRODUCTION:
-    SECURE_SSL_REDIRECT = True  # HTTPをHTTPSにリダイレクト
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000  # 1年
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    DEBUG = False  # 本番環境ではデバッグモードをオフに
-
 ALLOWED_HOSTS = ['pricealert-tpqq.onrender.com',
                   '127.0.0.1',
                   'localhost',
@@ -85,7 +71,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "PriceAlert.middleware.SwaggerSchemeMiddleware",  # Swagger URL修正ミドルウェア
 ]
 
 ROOT_URLCONF = "PriceAlert.urls"
@@ -161,20 +146,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# drf-yasg (Swagger) 設定
-SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
-        }
-    },
-    'VALIDATOR_URL': None,
-    'DEFAULT_API_URL': 'https://pricealert-tpqq.onrender.com',
-}
 
 # カスタムユーザーモデルの設定
 AUTH_USER_MODEL = 'accounts.User'
