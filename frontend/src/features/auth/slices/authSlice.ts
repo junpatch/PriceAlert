@@ -93,6 +93,12 @@ const authSlice = createSlice({
       TokenManager.clearTokens();
       logger.debug('ログアウト処理が完了しました');
     },
+    toggleAuth: (state) => {
+      state.isAuthenticated = !state.isAuthenticated;
+      state.loading = false;
+      state.error = null;
+      logger.info(`isAuthenticatedを${state.isAuthenticated}にトグルしました`);
+    },
   },
 });
 
@@ -103,6 +109,7 @@ export const {
   setError,
   syncTokenFromStorage,
   logout,
+  toggleAuth,
 } = authSlice.actions;
 
 export default authSlice.reducer; 

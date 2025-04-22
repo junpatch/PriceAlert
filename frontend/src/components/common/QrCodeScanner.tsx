@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Box, Alert, Typography, Button } from "@mui/material";
+import { Box, Alert, Typography, Button, IconButton } from "@mui/material";
 import { Html5Qrcode } from "html5-qrcode";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import FlipCameraAndroidIcon from "@mui/icons-material/FlipCameraAndroid";
 
 interface QrCodeScannerProps {
   fps?: number;
@@ -21,6 +22,10 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   const qrReaderRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>(
+    []
+  );
+  const [currentCameraIndex, setCurrentCameraIndex] = useState<number>(0);
 
   // 安全にスキャナーを停止する関数
   const safelyStopScanner = async () => {
@@ -105,7 +110,21 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     }
   };
 
-  const initializeScanner = async () => {
+  // カメラを切り替える関数
+  const switchCamera = async () => {
+    if (cameras.length <= 1) return;
+
+    await safelyStopScanner();
+    const nextCameraIndex = (currentCameraIndex + 1) % cameras.length;
+    setCurrentCameraIndex(nextCameraIndex);
+
+    // 少し待ってからカメラを再初期化
+    setTimeout(() => {
+      initializeScanner(nextCameraIndex);
+    }, 300);
+  };
+
+  const initializeScanner = async (cameraIndexOverride?: number) => {
     if (!qrReaderRef.current) return;
     setCameraError(null);
 
@@ -153,30 +172,58 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       try {
         // カメラを検出
         const devices = await Html5Qrcode.getCameras();
+        setCameras(devices || []);
 
         if (devices && devices.length > 0) {
-          const cameraId = devices[0].id;
+          // iPhoneやラベルが空のデバイスでもバックカメラを優先するロジック
+          const cameraIndexToUse =
+            cameraIndexOverride !== undefined ? cameraIndexOverride : 0;
+          setCurrentCameraIndex(cameraIndexToUse);
 
-          // スマホの場合は後ろカメラを優先
-          const backCamera = devices.find(
-            (device) =>
-              device.label.toLowerCase().includes("back") ||
-              device.label.toLowerCase().includes("rear") ||
-              device.label.toLowerCase().includes("環境") ||
-              device.label.toLowerCase().includes("後ろ")
-          );
+          // 利用可能なカメラが1つの場合は環境向き（バックカメラ）を指定
+          if (devices.length === 1) {
+            try {
+              await startScanner({ facingMode: "environment" }, size);
+            } catch (err) {
+              // 環境向きで失敗した場合は単純にデバイスIDを使用
+              await startScanner({ deviceId: devices[0].id }, size);
+            }
+          } else {
+            // 複数カメラがある場合
+            // ラベルに基づくバックカメラ検出
+            let backCameraIndex = 0; // デフォルトは最初のカメラ
 
-          const selectedCamera = backCamera ? backCamera.id : cameraId;
+            // バックカメラを特定（ラベルがある場合）
+            const backCameraFound = devices.findIndex(
+              (device) =>
+                device.label.toLowerCase().includes("back") ||
+                device.label.toLowerCase().includes("rear") ||
+                device.label.toLowerCase().includes("環境") ||
+                device.label.toLowerCase().includes("後ろ")
+            );
 
-          try {
-            // レンダリングを待つことで要素サイズの問題を回避
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            // ラベルからバックカメラが見つかった場合はそれを使用
+            if (backCameraFound !== -1) {
+              backCameraIndex = backCameraFound;
+            } else if (devices.length >= 2) {
+              // ラベルがない/見つからない場合で複数カメラある場合は2番目を使う
+              // (多くのモバイルデバイスは最初がフロント、2番目がバックカメラの順)
+              backCameraIndex = 1;
+            }
 
-            // 選択したカメラIDでスキャナーを開始
-            await startScanner({ deviceId: selectedCamera }, size);
-          } catch (err: any) {
-            // カメラIDでの開始が失敗した場合、環境設定を使用
-            await startScanner({ facingMode: "environment" }, size);
+            // 手動指定されたカメラがあればそれを優先
+            const selectedIndex =
+              cameraIndexOverride !== undefined
+                ? cameraIndexOverride
+                : backCameraIndex;
+            setCurrentCameraIndex(selectedIndex);
+
+            try {
+              await startScanner({ deviceId: devices[selectedIndex].id }, size);
+            } catch (err) {
+              // 特定のデバイスIDで失敗した場合は環境向きにフォールバック
+              await startScanner({ facingMode: "environment" }, size);
+            }
           }
         } else {
           setCameraError("利用可能なカメラが見つかりません");
@@ -266,34 +313,54 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
           </Button>
         </Box>
       ) : (
-        <Box
-          ref={qrReaderRef}
-          sx={{
-            width: "100%",
-            height: "100%",
-            minHeight: "250px",
-            overflow: "hidden",
-            position: "relative",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            margin: "0 auto",
-            borderRadius: "8px",
-            "& > *": {
-              margin: "0 auto",
+        <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
+          <Box
+            ref={qrReaderRef}
+            sx={{
+              width: "100%",
+              height: "100%",
+              minHeight: "250px",
+              overflow: "hidden",
+              position: "relative",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-            },
-            "& video": {
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
               margin: "0 auto",
-              display: "block",
-            },
-          }}
-        />
+              borderRadius: "8px",
+              "& > *": {
+                margin: "0 auto",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+              "& video": {
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                margin: "0 auto",
+                display: "block",
+              },
+            }}
+          />
+          {cameras.length > 1 && (
+            <IconButton
+              onClick={switchCamera}
+              sx={{
+                position: "absolute",
+                right: "16px",
+                bottom: "16px",
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                },
+                zIndex: 10,
+              }}
+              aria-label="カメラ切り替え"
+            >
+              <FlipCameraAndroidIcon />
+            </IconButton>
+          )}
+        </Box>
       )}
     </Box>
   );

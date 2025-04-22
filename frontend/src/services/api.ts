@@ -92,26 +92,37 @@ const baseQueryWithReauth: BaseQueryFn<
     // ログアウトエンドポイントや特定のエンドポイントでの401エラーは無視する
     const ignoreEndpoints = ['/auth/logout/', '/auth/refresh/'];
     let shouldIgnore = false;
+    let url = 'unknown';
 
-    // リクエストURLをチェック
-    if (typeof args === 'object' && 'url' in args) {
-      const url = args.url;
-      shouldIgnore = ignoreEndpoints.some(endpoint => url.includes(endpoint));
-      
-      if (shouldIgnore) {
-        console.log(`401エラーですが、無視するエンドポイント(${url})のため、イベントをディスパッチしません。`);
-      } else {
-        // 401エラーのイベントをディスパッチ
-        const authErrorEvent = new CustomEvent(API_ERROR_EVENT, {
-          detail: {
-            status: 401,
-            error: result.error,
-            url: typeof args === 'object' && 'url' in args ? args.url : 'unknown'
-          }
-        });
-        window.dispatchEvent(authErrorEvent);
-        console.log('401エラーを検出し、イベントをディスパッチしました。');
+    // argsの構造をより詳細にログ出力（デバッグ用）
+    if (import.meta.env.DEV) {
+      console.debug('401エラー発生時のargs:', JSON.stringify(args));
+    }
+
+    // 異なるargsの形式に対応
+    if (typeof args === 'object') {
+      if ('url' in args) {
+        url = args.url;
+      } else if (typeof args.endpoint === 'string') {
+        url = args.endpoint;
       }
+      
+      shouldIgnore = ignoreEndpoints.some(endpoint => url.includes(endpoint));
+    }
+    
+    if (shouldIgnore) {
+      console.log(`401エラーですが、無視するエンドポイント(${url})のため、イベントをディスパッチしません。`);
+    } else {
+      // 401エラーのイベントをディスパッチ
+      const authErrorEvent = new CustomEvent(API_ERROR_EVENT, {
+        detail: {
+          status: 401,
+          error: result.error,
+          url: url
+        }
+      });
+      window.dispatchEvent(authErrorEvent);
+      console.log('401エラーを検出し、イベントをディスパッチしました。');
     }
   }
 
