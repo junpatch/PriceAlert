@@ -103,8 +103,12 @@ const baseQueryWithReauth: BaseQueryFn<
     if (typeof args === 'object') {
       if ('url' in args) {
         url = args.url;
-      } else if (typeof args.endpoint === 'string') {
-        url = args.endpoint;
+      } else {
+        // endpointプロパティが存在するか安全にチェック
+        const argObj = args as Record<string, unknown>;
+        if ('endpoint' in argObj && typeof argObj.endpoint === 'string') {
+          url = argObj.endpoint;
+        }
       }
       
       shouldIgnore = ignoreEndpoints.some(endpoint => url.includes(endpoint));
