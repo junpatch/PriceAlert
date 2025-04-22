@@ -20,6 +20,7 @@ beautifulsoup4==4.12.3
 selenium==4.18.1
 webdriver-manager==4.0.1
 lxml==5.1.0
+amazon-paapi5==1.1.2
 
 # Async processing
 celery==5.3.6
