@@ -37,8 +37,8 @@ class SettingsView(viewsets.ViewSet):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    # GET: users/settings/
-    # PATCH: users/settings/
+    # GET: users/settings/me/
+    # PATCH: users/settings/me/
     @action(detail=False, methods=['GET', 'PATCH'])
     def me(self, request):
         """

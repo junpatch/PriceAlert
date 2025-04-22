@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Alert, Notification
+from .models import Alert, Notification, EmailFrequency
 from products.models import Product
 
 
@@ -65,3 +65,12 @@ class NotificationSerializer(serializers.ModelSerializer):
         アフィリエイトURLを取得
         """
         return obj.product_on_ec_site.affiliate_url 
+    
+class EmailFrequencySerializer(serializers.ModelSerializer):
+    """
+    メール送信履歴のシリアライザー
+    """
+    email_frequency_display = serializers.CharField(source='get_email_frequency_display', read_only=True)
+    class Meta:
+        model = EmailFrequency
+        fields = ['id', 'email_frequency', 'email_frequency_display', 'interval', 'sent_at', 'created_at']

@@ -3,7 +3,7 @@ from accounts.models import User
 from notifications.models import EmailFrequency
 
 def get_default_email_frequency():
-    return EmailFrequency.objects.get_or_create(id=1)[0]
+    return EmailFrequency.objects.filter(email_frequency='immediately').first().id  # type: ignore
 
 class Settings(models.Model):
     email_frequency = models.ForeignKey(

@@ -7,12 +7,17 @@ FREQUENCY_CHOICES = [
     ('daily', '毎日'),
     ('weekly', '毎週'),
 ]
+INITIAL_FREQUENCIES = [
+    ('immediately', 0),
+    ('daily', 1),
+    ('weekly', 7),
+]
 
 # 初期データ挿入
 def insert_initial_frequencies(apps, schema_editor):
     EmailFrequency = apps.get_model('notifications', 'EmailFrequency')
     EmailFrequency.objects.bulk_create([
-        EmailFrequency(email_frequency=frequency) for frequency in FREQUENCY_CHOICES
+        EmailFrequency(email_frequency=frequency[0], interval=frequency[1]) for frequency in INITIAL_FREQUENCIES
     ])
 
 class Migration(migrations.Migration):
@@ -41,6 +46,7 @@ class Migration(migrations.Migration):
                         max_length=50,
                     ),
                 ),
+                ("interval", models.IntegerField(default=0)),
                 ("sent_at", models.DateTimeField(blank=True, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
