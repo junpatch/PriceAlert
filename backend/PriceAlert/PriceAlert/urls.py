@@ -33,11 +33,17 @@ schema_view = get_schema_view(
     info,
     public=True,
     permission_classes=(permissions.AllowAny,),
+    url='https://pricealert-tpqq.onrender.com',  # 本番環境のベースURL
 )
+
+# この関数でSwagger UIのコンテンツを修正
+def swagger_wrapper(request, *args, **kwargs):
+    response = schema_view.with_ui('swagger', cache_timeout=0)(request, *args, **kwargs)
+    return response
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('swagger/', swagger_wrapper, name='schema-swagger-ui'),
     
     # API V1エンドポイント
     path('api/v1/auth/', include('accounts.urls')),

@@ -1,0 +1,50 @@
+{% extends "drf-yasg/swagger-ui.html" %} {% load static %} {% block
+extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // HTTPSを強制するスクリプト
+    const baseUrl = window.location.protocol + "//" + window.location.host;
+    const httpsUrl = baseUrl.replace("http://", "https://");
+
+    // すべてのリクエストURLをHTTPSに置き換え
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "href"
+        ) {
+          const element = mutation.target;
+          if (
+            element.getAttribute("href") &&
+            element.getAttribute("href").startsWith("http://")
+          ) {
+            element.setAttribute(
+              "href",
+              element.getAttribute("href").replace("http://", "https://")
+            );
+          }
+        }
+      });
+    });
+
+    // Swagger UI初期化後の処理
+    window.addEventListener("load", function () {
+      setTimeout(function () {
+        // Swagger UIのリクエストURLを修正
+        const requestUrlInput = document.querySelector(".request-url");
+        if (requestUrlInput && requestUrlInput.value.startsWith("http://")) {
+          requestUrlInput.value = requestUrlInput.value.replace(
+            "http://",
+            "https://"
+          );
+        }
+
+        // リンク要素監視開始
+        document.querySelectorAll("a").forEach(function (a) {
+          observer.observe(a, { attributes: true });
+        });
+      }, 1000);
+    });
+  });
+</script>
+{% endblock %}
