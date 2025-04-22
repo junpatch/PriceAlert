@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 from typing import Any, Optional, Type, TypeVar, cast
+from django.db import transaction
+import logging
+
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T', bound='User')
 
@@ -9,14 +14,28 @@ class UserManager(BaseUserManager):
     def create_user(self, email: str, username: str, password: Optional[str] = None, **extra_fields: Any) -> 'User':
         """
         通常ユーザーを作成する
+        トランザクション内でユーザーと設定を同時に作成し、一貫性を確保する
         """
         if not email:
             raise ValueError('メールアドレスは必須です')
         
         email = self.normalize_email(email)
-        user = self.model(email=email, username=username, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
+        
+        # トランザクション内でユーザーと設定を作成
+        with transaction.atomic():
+            user = self.model(email=email, username=username, **extra_fields)
+            user.set_password(password)
+            user.save(using=self._db)
+            # 注意: 循環インポートを避けるため、ここで直接インポート
+            from users.models import Settings
+            try:
+                settings = Settings.objects.create(user=user)
+                logger.info(f"ユーザー {username} の設定が正常に作成されました")
+            except Exception as e:
+                logger.error(f"ユーザー {username} の設定作成に失敗しました: {str(e)}")
+                # 例外を再スローするとトランザクションがロールバックされる
+                raise
+                
         return cast('User', user)
     
     def create_superuser(self, email: str, username: str, password: Optional[str] = None, **extra_fields: Any) -> 'User':

@@ -84,7 +84,7 @@ class NotificationService:
         
         previous_price = None
         if previous_notifications.exists():
-            previous_price = previous_notifications.first().new_price
+            previous_price = previous_notifications.first().new_price # type: ignore
         
         # 通知が作成されたかどうかのフラグ
         notification_created = False

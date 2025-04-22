@@ -101,7 +101,7 @@ class ECConnectorFactory:
                     
             site_counts = Counter(dict['ec_site'] for dict in all_product_infos if dict.get('ec_site') in {'amazon', 'rakuten', 'yahoo'})
             logger.info(    
-                f"JANコード検索が完了しました - JANコード: {jan_code}, - 結果件数: "
+                f"JANコードから商品が見つかりました - JANコード: {jan_code}, - 結果件数: "
                 f"Amazon {site_counts.get('amazon', 0)}件 "
                 f"楽天 {site_counts.get('rakuten', 0)}件 "
                 f"Yahoo {site_counts.get('yahoo', 0)}件"

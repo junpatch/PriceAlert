@@ -84,7 +84,7 @@ class PriceHistory(models.Model):
 
 class UserProduct(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='userproduct')
+    product = models.ForeignKey(Product, on_delete=models.RESTRICT, related_name='userproduct')
     price_threshold = models.IntegerField(null=True, blank=True)
     threshold_type = models.CharField(max_length=20, default='list_price')
     threshold_percentage = models.IntegerField(null=True, blank=True)

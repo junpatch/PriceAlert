@@ -223,14 +223,10 @@ class UserProductViewSet(viewsets.ViewSet):
             user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
             product_name = user_product.product.name
             
-            # 他のユーザーも使っている場合は関連付けのみ削除
-            if user_product.product.userproduct.count() <= 1: # type: ignore
-                logger.info('商品を完全に削除します - 商品: %s..., ユーザー: %s', product_name[:20], request.user.username)
-                user_product.product.delete()
-            else:
-                logger.info('ユーザーと商品の関連付けのみ削除します - 商品: %s..., ユーザー: %s', 
-                          product_name[:20], request.user.username)
-                user_product.delete()
+            # Product自体は削除しない。次回同一商品追加時に価格履歴が残るようにしておく。
+            logger.info('ユーザーと商品の関連付けを削除します - 商品: %s..., ユーザー: %s', 
+                        product_name[:20], request.user.username)
+            user_product.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         except UserProduct.DoesNotExist:

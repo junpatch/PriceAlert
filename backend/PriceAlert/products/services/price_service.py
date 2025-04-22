@@ -14,7 +14,7 @@ class PriceService:
     def __init__(self):
         self.factory = ECConnectorFactory()
 
-    def fetch_price(self) -> bool:
+    def fetch_price(self) -> Dict[str, int]:
         """URLから商品を検索"""
         logger.info('価格取得を開始します')
         
@@ -22,6 +22,10 @@ class PriceService:
         products = Product.objects.all()
 
         # JANコードごとにループ
+        stats_all = {
+            'new_ec_sites': 0,
+            'new_price_histories': 0
+        }
         for product in products:
 
             jan_code = product.jan_code
@@ -52,10 +56,14 @@ class PriceService:
                     stats['new_price_histories'] += 1 if is_price_changed else 0
             
             logger.info(
-                f'価格取得が完了しました - JANコード: {jan_code} - 新規ECサイト: {stats["new_ec_sites"]}件, '
+                f'DBへの保存が完了しました - JANコード: {jan_code} - 新規ECサイト: {stats["new_ec_sites"]}件, '
                 f'価格更新: {stats["new_price_histories"]}件',
             )
-        return True
+
+            stats_all['new_ec_sites'] += stats['new_ec_sites']
+            stats_all['new_price_histories'] += stats['new_price_histories']
+
+        return stats_all
 
 
     def is_minimum_price_changed(self, product: Product, new_or_price_changed_products: List[Dict[str, Any]]) -> bool:

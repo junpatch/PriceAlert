@@ -77,10 +77,6 @@ class AmazonConnector(ECConnector):
                     continue
 
                 asin = item.asin if hasattr(item, 'asin') else None
-                # url = item.detail_page_url if hasattr(item, 'detail_page_url') else None
-                
-                # if not asin or not url:
-                #     continue
                 
                 # 商品情報整形
                 product_data = self._format_product_data(item, asin=asin, jan_code=jan_code)
@@ -101,7 +97,7 @@ class AmazonConnector(ECConnector):
 
     def _extract_product_id(self, url: str) -> Optional[str]:
         """商品URLからASINを抽出する"""
-        asin_match = re.search(r"/[dg]p/(?:product|aw/d/)?([A-Z0-9]{10})/?", url)
+        asin_match = re.search(r"/[dg]p/(?:product/|aw/d/)?([A-Z0-9]{10})/?", url)
         if asin_match:
             return asin_match.group(1)
         return None

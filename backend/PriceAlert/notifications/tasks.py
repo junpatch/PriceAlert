@@ -26,9 +26,13 @@ def check_price_alerts(self):
         # 価格アラートをチェック    
         notification_count = NotificationService.check_price_alerts()
 
-        end_time = time.time()
-        logger.info(f"価格アラートチェックタスクを完了しました。{notification_count}件の通知を作成しました。所要時間: {end_time - start_time:.2f}秒")
-        return f"{notification_count}件の通知を作成しました"
+        elapsed_time = time.time() - start_time
+        logger.info(f"価格アラートチェックタスクを完了しました - "
+                    f"通知件数: {notification_count}件 - "
+                    f"所要時間: {elapsed_time:.2f}秒")
+        
+        return notification_count
+    
     except Exception as e:
         logger.error(f"価格アラートチェックタスクでエラーが発生しました: {str(e)}", exc_info=True)
         # Celeryにタスクの失敗を通知し、リトライを行う
@@ -54,10 +58,14 @@ def send_price_alert_notifications(self):
         # 価格アラート通知をメールで送信
         result = EmailNotificationService.send_price_alert_notification()
 
-        elapsed_time = round(time.time() - start_time, 2)
+        elapsed_time = time.time() - start_time
 
-        logger.info(f"{result.get('message')}, success: {result.get('success')}, 所要時間: {elapsed_time}秒")
+        logger.info(f"{result.get('message')} - "
+                    f"success: {result.get('success')} - "
+                    f"所要時間: {elapsed_time:.2f}秒")
+
         return result
+        
     except Exception as e:
         logger.error(f"価格アラート通知メール送信中に予期せぬエラーが発生しました: {str(e)}", exc_info=True)
         # リトライを行う

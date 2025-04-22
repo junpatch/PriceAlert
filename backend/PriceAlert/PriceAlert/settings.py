@@ -31,7 +31,7 @@ SECRET_KEY = "django-insecure-d-sbx2!!5ovck860b%e@!_ijh4_-o+eti*1%9)!zu0l8(au()i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['pricealert-tpqq.onrender.com']
 
 
 # Application definition
@@ -194,6 +194,7 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Viteの開発サーバー
     "http://127.0.0.1:5173",
+    "https://price-alert-delta.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
