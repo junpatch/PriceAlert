@@ -100,7 +100,7 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # アプリケーション起動
-CMD ["gunicorn", "price_alert.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "PriceAlert.PriceAlert.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
 ```
 
 ### 3.3 フロントエンド Dockerfile
