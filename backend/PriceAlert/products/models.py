@@ -60,7 +60,10 @@ class ProductOnECSite(models.Model):
             models.Index(fields=['product', 'ec_site']),
             models.Index(fields=['ec_product_id']),
         ]
-
+        constraints = [
+            models.UniqueConstraint(fields=['ec_product_id', 'ec_site'], name='unique_ec_product_id_per_site')
+        ]
+        
     def __str__(self):
         return f"{self.product.name} - {self.ec_site.name}"
 

@@ -3,12 +3,14 @@ import logging
 from rest_framework import status, permissions, serializers, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 
 from .models import Product, UserProduct, ProductOnECSite, PriceHistory
 from .serializers import ProductSerializer, UserProductSerializer, ProductOnECSiteSerializer, ProductRegistrationSerializer, PriceHistorySerializer
 from .services.product_service import ProductService
-
+from .tasks import fetch_and_store_prices
+from notifications.tasks import check_price_alerts, send_price_alert_notifications
 
 
 logger = logging.getLogger('products.views')
@@ -253,6 +255,23 @@ class UserProductViewSet(viewsets.ViewSet):
             logger.error('ユーザー商品の更新で予期せぬエラー - 商品: %s, ユーザー: %s, エラー: %s', 
                         user_product.product.name, user_product.user.username, str(e), exc_info=True)
             raise
+    
+# Celery WorkerをRailwayから呼び出すためのAPI
+# /fetch-and-store-prices/
+class CeleryWorkerViewSet(APIView):
+    """
+    Celery WorkerをRailwayから呼び出すためのAPI
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """
+        Celery Workerを呼び出す
+        """
+        fetch_and_store_prices.delay()
+        check_price_alerts.delay()
+        send_price_alert_notifications.delay()
+        return Response({"detail": "Celery Workerを呼び出しました。"}, status=status.HTTP_200_OK)
     
 # ここから下はAPI仕様書外の実装。使うにはフロント側でも対応が必要。
 class ProductOnECSiteViewSet(viewsets.ModelViewSet):

@@ -14,6 +14,15 @@ class ProductOnECSiteSerializer(serializers.ModelSerializer):
         model = ProductOnECSite
         fields = ['id', 'ec_site', 'current_price', 'effective_price', 'product_url', 'affiliate_url', 'seller_name', 'shipping_fee', 'condition', 'last_updated', 'is_active', 'created_at', 'updated_at']
 
+    def validate(self, data):
+        ec_product_id = data.get('ec_product_id')
+        ec_site = data.get('ec_site')
+
+        if ProductOnECSite.objects.filter(ec_product_id=ec_product_id, ec_site=ec_site).exists():
+            raise serializers.ValidationError('このECサイト上のec_product_idはすでに存在します。')
+
+        return data
+
 class ProductSerializer(serializers.ModelSerializer):
     ec_sites = ProductOnECSiteSerializer(source='productonecsite_set', many=True, read_only=True)
     
