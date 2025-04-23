@@ -143,9 +143,18 @@ export interface UIState {
 }
 
 // 設定関連
-export interface UserSettings {
+export interface EmailFrequency {
   id: number;
   email_frequency: 'immediately' | 'daily' | 'weekly';
+  email_frequency_display: string;
+  interval: number;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface UserSettings {
+  id: number;
+  email_frequency: EmailFrequency;
   email_notifications: boolean;
   user: User;
   created_at: string;

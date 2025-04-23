@@ -21,14 +21,18 @@ import {
   useGetUserSettingsQuery,
   useUpdateUserSettingsMutation,
 } from "@services/api";
-import { UserSettings } from "@/types";
+
+interface SettingsFormState {
+  email_frequency: 'immediately' | 'daily' | 'weekly';
+  email_notifications: boolean;
+}
 
 const SettingsPage: React.FC = () => {
   const { data: userSettings, isLoading, error } = useGetUserSettingsQuery();
   const [updateSettings, { isLoading: isUpdating, error: updateError }] =
     useUpdateUserSettingsMutation();
 
-  const [settings, setSettings] = useState<Partial<UserSettings>>({
+  const [settings, setSettings] = useState<SettingsFormState>({
     email_frequency: "daily",
     email_notifications: true,
   });
@@ -40,7 +44,7 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (userSettings) {
       setSettings({
-        email_frequency: userSettings.email_frequency,
+        email_frequency: userSettings.email_frequency.email_frequency as 'immediately' | 'daily' | 'weekly',
         email_notifications: userSettings.email_notifications,
       });
       setHasChanges(false);
@@ -67,7 +71,7 @@ const SettingsPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       await updateSettings({
-        email_frequency: settings.email_frequency,
+        email_frequency_id: getEmailFrequencyIdByType(settings.email_frequency),
         email_notifications: settings.email_notifications,
       }).unwrap();
       setSuccessMessage("設定を保存しました");
@@ -75,6 +79,25 @@ const SettingsPage: React.FC = () => {
     } catch (err) {
       console.error("設定の更新に失敗しました", err);
     }
+  };
+
+  // email_frequency値からIDを取得するヘルパー関数
+  const getEmailFrequencyIdByType = (type: 'immediately' | 'daily' | 'weekly'): number => {
+    if (!userSettings) return 1; // デフォルト値
+    
+    // 既存のメール頻度設定と同じ場合は、その設定のIDを返す
+    if (userSettings.email_frequency.email_frequency === type) {
+      return userSettings.email_frequency.id;
+    }
+    
+    // 頻度タイプに応じたIDのマッピング
+    const frequencyIdMap: Record<string, number> = {
+      immediately: 1,
+      daily: 2,
+      weekly: 3
+    };
+    
+    return frequencyIdMap[type] || 1;
   };
 
   if (isLoading) {
