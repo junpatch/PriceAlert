@@ -5,7 +5,7 @@ from .views import AlertViewSet, NotificationViewSet
 # DRF RouterをセットアップしてViewSetをルーティング
 router = DefaultRouter()
 router.register(r'alerts', AlertViewSet, basename='alert')
-router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'', NotificationViewSet, basename='notification')
 
 urlpatterns = [
     path('', include(router.urls)),

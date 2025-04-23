@@ -22,6 +22,7 @@ from django.urls import path, include
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
+from . import views
 
 info = openapi.Info(
     title='PriceAlert API',
@@ -38,12 +39,13 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('', views.home, name='home'),  # トップページのURL
+    path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     
     # API V1エンドポイント
     path('api/v1/auth/', include('accounts.urls')),
     path('api/v1/users/', include('users.urls')),
     path('api/v1/', include('products.urls')),
-    path('api/v1/', include('notifications.urls')),
+    path('api/v1/notifications/', include('notifications.urls')),
 ]
