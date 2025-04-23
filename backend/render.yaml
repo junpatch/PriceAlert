@@ -4,8 +4,14 @@ services:
     name: pricealert
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt && python PriceAlert/manage.py collectstatic --noinput
-    startCommand: cd PriceAlert && gunicorn PriceAlert.wsgi:application --log-file -
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: |
+      if [ -d "backend" ]; then
+        cd backend/PriceAlert
+      else
+        cd PriceAlert
+      fi
+      gunicorn PriceAlert.wsgi:application --log-file -
     envVars:
       - key: DJANGO_ENVIRONMENT
         value: production
@@ -23,6 +29,8 @@ services:
         value: false
       - key: ALLOWED_HOSTS
         value: pricealert-tpqq.onrender.com,price-alert-delta.vercel.app,127.0.0.1,localhost
+      - key: DJANGO_SETTINGS_MODULE
+        value: PriceAlert.settings
 
   # ワーカーサービス（Celery）
   - type: worker
@@ -30,7 +38,13 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: cd PriceAlert && celery -A PriceAlert worker -l info
+    startCommand: |
+      if [ -d "backend" ]; then
+        cd backend/PriceAlert
+      else
+        cd PriceAlert
+      fi
+      celery -A PriceAlert worker -l info
     envVars:
       - key: DJANGO_ENVIRONMENT
         value: production
@@ -44,6 +58,8 @@ services:
         generateValue: true
       - key: DEBUG
         value: false
+      - key: DJANGO_SETTINGS_MODULE
+        value: PriceAlert.settings
       - key: CELERY_BROKER_URL
         fromService:
           type: redis
@@ -56,7 +72,13 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: cd PriceAlert && celery -A PriceAlert beat -l info
+    startCommand: |
+      if [ -d "backend" ]; then
+        cd backend/PriceAlert
+      else
+        cd PriceAlert
+      fi
+      celery -A PriceAlert beat -l info
     envVars:
       - key: DJANGO_ENVIRONMENT
         value: production
@@ -70,6 +92,8 @@ services:
         generateValue: true
       - key: DEBUG
         value: false
+      - key: DJANGO_SETTINGS_MODULE
+        value: PriceAlert.settings
       - key: CELERY_BROKER_URL
         fromService:
           type: redis
