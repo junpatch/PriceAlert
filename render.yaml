@@ -108,7 +108,7 @@ databases:
     user: pricealert_user
 
 # Redis
-services:
+services2:
   - type: redis
     name: pricealert-redis
     plan: free
