@@ -23,7 +23,7 @@ import {
 } from "@services/api";
 
 interface SettingsFormState {
-  email_frequency: 'immediately' | 'daily' | 'weekly';
+  email_frequency: "immediately" | "daily" | "weekly";
   email_notifications: boolean;
 }
 
@@ -44,7 +44,10 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (userSettings) {
       setSettings({
-        email_frequency: userSettings.email_frequency.email_frequency as 'immediately' | 'daily' | 'weekly',
+        email_frequency: userSettings.email_frequency.email_frequency as
+          | "immediately"
+          | "daily"
+          | "weekly",
         email_notifications: userSettings.email_notifications,
       });
       setHasChanges(false);
@@ -71,7 +74,7 @@ const SettingsPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       await updateSettings({
-        email_frequency_id: getEmailFrequencyIdByType(settings.email_frequency),
+        email_frequency: getEmailFrequencyByType(settings.email_frequency),
         email_notifications: settings.email_notifications,
       }).unwrap();
       setSuccessMessage("設定を保存しました");
@@ -82,21 +85,23 @@ const SettingsPage: React.FC = () => {
   };
 
   // email_frequency値からIDを取得するヘルパー関数
-  const getEmailFrequencyIdByType = (type: 'immediately' | 'daily' | 'weekly'): number => {
+  const getEmailFrequencyByType = (
+    type: "immediately" | "daily" | "weekly"
+  ): number => {
     if (!userSettings) return 1; // デフォルト値
-    
+
     // 既存のメール頻度設定と同じ場合は、その設定のIDを返す
     if (userSettings.email_frequency.email_frequency === type) {
       return userSettings.email_frequency.id;
     }
-    
+
     // 頻度タイプに応じたIDのマッピング
     const frequencyIdMap: Record<string, number> = {
       immediately: 1,
       daily: 2,
-      weekly: 3
+      weekly: 3,
     };
-    
+
     return frequencyIdMap[type] || 1;
   };
 

@@ -49,7 +49,7 @@ class SettingsView(viewsets.ViewSet):
             serializer = SettingsSerializer(settings)
             return Response(serializer.data)
         elif request.method == 'PATCH':
-            serializer = SettingsSerializer(settings, data=request.data, partial=True, context={'request': request})
+            serializer = SettingsSerializer(settings, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
