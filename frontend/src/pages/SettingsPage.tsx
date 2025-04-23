@@ -74,7 +74,7 @@ const SettingsPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       await updateSettings({
-        email_frequency: getEmailFrequencyByType(settings.email_frequency),
+        email_frequency_id: getEmailFrequencyIdByType(settings.email_frequency),
         email_notifications: settings.email_notifications,
       }).unwrap();
       setSuccessMessage("設定を保存しました");
@@ -84,8 +84,8 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // email_frequency値からIDを取得するヘルパー関数
-  const getEmailFrequencyByType = (
+  // email_frequency_id値からIDを取得するヘルパー関数
+  const getEmailFrequencyIdByType = (
     type: "immediately" | "daily" | "weekly"
   ): number => {
     if (!userSettings) return 1; // デフォルト値

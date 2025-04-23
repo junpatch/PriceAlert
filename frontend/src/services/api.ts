@@ -346,7 +346,7 @@ export const api = createApi({
       query: () => 'users/settings/me/',
       providesTags: ['Settings'],
     }),
-    updateUserSettings: builder.mutation<UserSettings, { email_frequency?: number; email_notifications?: boolean }>({
+    updateUserSettings: builder.mutation<UserSettings, { email_frequency_id?: number; email_notifications?: boolean }>({
       query: (settings) => ({
         url: 'users/settings/me/',
         method: 'PATCH',
