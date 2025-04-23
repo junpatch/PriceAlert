@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-d-sbx2!!5ovck860b%e@!_ijh4_-o+eti*1%9)!zu0l8(au()i"
+SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-d-sbx2!!5ovck860b%e@!_ijh4_-o+eti*1%9)!zu0l8(au()i")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # 環境変数DJANGO_ENVIRONMENTに基づいて環境を判定
@@ -34,8 +34,15 @@ ENVIRONMENT = os.getenv('DJANGO_ENVIRONMENT', 'development')
 IS_PRODUCTION = ENVIRONMENT == 'production'
 
 # 環境に応じたデバッグ設定
-# DEBUG = not IS_PRODUCTION  # 開発環境ではTrue、本番環境ではFalse
-DEBUG = True  # TODO: 最終的にはFalseにする
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# フロントエンドURL（環境に応じて変更）
+if IS_PRODUCTION:
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://price-alert-delta.vercel.app')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'https://pricealert-tpqq.onrender.com')
+else:
+    FRONTEND_URL = 'http://localhost:5173'  # 開発環境のフロントエンドURL
+    BACKEND_URL = 'http://localhost:8000'  # 開発環境のバックエンドURL
 
 # 本番環境の場合はセキュリティ設定を有効化
 if IS_PRODUCTION:
@@ -47,10 +54,15 @@ if IS_PRODUCTION:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-ALLOWED_HOSTS = ['pricealert-tpqq.onrender.com',
-                  '127.0.0.1',
-                  'localhost',
-                  'price-alert-delta.vercel.app']
+# 常に開発用ホストを含める
+DEV_HOSTS = ['127.0.0.1', 'localhost']
+
+# 環境変数から取得するか、デフォルト値を使用
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 
+                        f'{FRONTEND_URL},{BACKEND_URL}').replace('http://', '').replace('https://', '').split(',')
+
+# 開発用ホストを追加
+ALLOWED_HOSTS.extend(DEV_HOSTS)
 
 
 # Application definition
@@ -168,6 +180,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# WhiteNoiseを追加（静的ファイル配信用）
+if IS_PRODUCTION:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -222,8 +239,8 @@ CSRF_TRUSTED_ORIGINS = [
 # 本番環境の場合は追加の設定
 if IS_PRODUCTION:
     CSRF_TRUSTED_ORIGINS.extend([
-        "https://price-alert-delta.vercel.app",
-        "https://pricealert-tpqq.onrender.com",
+        FRONTEND_URL,
+        BACKEND_URL,
     ])
 
 # CORS設定
@@ -235,8 +252,8 @@ CORS_ALLOWED_ORIGINS = [
 # 本番環境の場合は追加の設定
 if IS_PRODUCTION:
     CORS_ALLOWED_ORIGINS.extend([
-        "https://price-alert-delta.vercel.app",
-        "https://pricealert-tpqq.onrender.com",
+        FRONTEND_URL,
+        BACKEND_URL,
     ])
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -260,30 +277,18 @@ CORS_ALLOW_HEADERS = [
 ] 
 
 # Celery設定
-CELERY_BROKER_URL = os.getenv('REDIS_URL')  # RedisがBroker
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL')
-
-# デバッグ用のローカルRedis接続設定（環境変数がない場合のフォールバック）
-if not CELERY_BROKER_URL:
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-if not CELERY_RESULT_BACKEND:
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-
-# CELERY_BROKER_URL = 'memory://'  # または 'rpc://'
-CELERY_TASK_ALWAYS_EAGER = True  # タスクを即座に実行（同期処理）
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
 
 # メール設定（開発環境ではコンソール出力）
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@pricealert.example.com'
 
-# フロントエンドURL（環境に応じて変更）
-if IS_PRODUCTION:
-    FRONTEND_URL = 'https://price-alert-delta.vercel.app'
-else:
-    FRONTEND_URL = 'http://localhost:5173'  # 開発環境のフロントエンドURL
 
 # メール設定（本番環境）
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

@@ -1,0 +1,3 @@
+web: cd PriceAlert && gunicorn PriceAlert.wsgi:application --log-file -
+worker: cd PriceAlert && celery -A PriceAlert worker -l info
+scheduler: cd PriceAlert && celery -A PriceAlert beat -l info 

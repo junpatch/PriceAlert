@@ -187,3 +187,69 @@ backend/
 ├── .env.example             # 環境変数のサンプル
 └── docker-compose.yml       # Docker Compose設定
 ```
+
+## Render.comへのデプロイ方法
+
+このプロジェクトは、Render.comにデプロイするための設定が含まれています。以下の手順でデプロイを行ってください。
+
+### 前提条件
+
+- Render.comアカウント
+- GitHubリポジトリにコードがプッシュされていること
+
+### デプロイ手順
+
+1. Render.comにログインし、ダッシュボードから「New +」ボタンをクリックします。
+
+2. 「Web Service」を選択します。
+
+3. GitHubからリポジトリを連携します。
+
+4. 以下の設定を行います：
+   - **Name**: `pricealert`（任意の名前）
+   - **Environment**: `Python`
+   - **Region**: 任意（アジアに近い地域を選択することをおすすめ）
+   - **Branch**: `main`（使用するブランチ）
+   - **Build Command**: `./build.sh`
+   - **Start Command**: `cd PriceAlert && gunicorn PriceAlert.wsgi:application --log-file -`
+   - **Plan**: Free（または必要に応じて他のプラン）
+
+5. 以下の環境変数を設定します：
+   - `DJANGO_ENVIRONMENT`: `production`
+   - `SECRET_KEY`: ランダムな文字列（セキュリティのため）
+   - `DEBUG`: `false`
+   - `ALLOWED_HOSTS`: `pricealert-tpqq.onrender.com,price-alert-delta.vercel.app`
+   - `DATABASE_URL`: Render.comが提供するPostgreSQLの接続URLを設定する場合は自動で設定されます
+
+6. 「Advanced」セクションを開き、以下を設定します：
+   - **Auto-Deploy**: `Yes`
+
+7. 「Create Web Service」をクリックして、デプロイを開始します。
+
+### Celery WorkerとBeatの設定
+
+Celeryワーカーとスケジューラを設定するには：
+
+1. Render.comダッシュボードから「New +」→「Background Worker」を選択します。
+2. 同じリポジトリを選択し、以下の設定を行います：
+   - **Name**: `pricealert-worker`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `cd PriceAlert && celery -A PriceAlert worker -l info`
+   - 環境変数はWebサービスと同じものを設定します
+
+3. 同様に、Celery Beatも設定します：
+   - **Name**: `pricealert-scheduler`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `cd PriceAlert && celery -A PriceAlert beat -l info`
+   - 環境変数はWebサービスと同じものを設定します
+
+### Redisの設定
+
+Redisを使用するには：
+
+1. Render.comダッシュボードから「New +」→「Redis」を選択します。
+2. 適切な名前（例：`pricealert-redis`）とプランを選択します。
+3. 作成されたRedisインスタンスの接続URL（`REDIS_URL`環境変数の値）をコピーし、
+   Web ServiceとBackground Workerの環境変数に`CELERY_BROKER_URL`として追加します。
+
+これらの手順を完了すると、Render.com上でアプリケーションが動作するようになります。
