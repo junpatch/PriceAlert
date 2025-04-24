@@ -283,10 +283,6 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """ユーザーが登録した商品に関連するECサイト情報のみ返す"""
-        # swagger_fake_viewの場合は空のクエリセットを返す
-        if getattr(self, 'swagger_fake_view', False):
-            return ProductOnECSite.objects.none()
-            
         logger.debug('ECサイト商品情報の取得を開始 - ユーザー: %s', self.request.user.username) # type: ignore
         user_products = UserProduct.objects.filter(user=self.request.user).values_list('product_id', flat=True)
         return ProductOnECSite.objects.filter(product_id__in=user_products)
