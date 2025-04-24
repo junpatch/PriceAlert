@@ -268,9 +268,9 @@ class CeleryWorkerViewSet(APIView):
         """
         Celery Workerを呼び出す
         """
-        fetch_and_store_prices.delay()
-        check_price_alerts.delay()
-        send_price_alert_notifications.delay()
+        fetch_and_store_prices.delay() # type: ignore
+        check_price_alerts.delay() # type: ignore
+        send_price_alert_notifications.delay() # type: ignore
         return Response({"detail": "Celery Workerを呼び出しました。"}, status=status.HTTP_200_OK)
     
 # ここから下はAPI仕様書外の実装。使うにはフロント側でも対応が必要。
@@ -283,6 +283,10 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """ユーザーが登録した商品に関連するECサイト情報のみ返す"""
+        # swagger_fake_viewの場合は空のクエリセットを返す
+        if getattr(self, 'swagger_fake_view', False):
+            return ProductOnECSite.objects.none()
+            
         logger.debug('ECサイト商品情報の取得を開始 - ユーザー: %s', self.request.user.username) # type: ignore
         user_products = UserProduct.objects.filter(user=self.request.user).values_list('product_id', flat=True)
         return ProductOnECSite.objects.filter(product_id__in=user_products)

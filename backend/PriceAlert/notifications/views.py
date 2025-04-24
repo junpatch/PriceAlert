@@ -37,6 +37,10 @@ class AlertViewSet(viewsets.ModelViewSet):
         """
         ログインユーザーのアラート設定のみを取得
         """
+        # swagger_fake_viewの場合は空のクエリセットを返す
+        if getattr(self, 'swagger_fake_view', False):
+            return Alert.objects.none()
+            
         user = self.request.user
         product_id = self.request.query_params.get('product_id') # type: ignore
         
@@ -78,6 +82,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         """
         ログインユーザーの通知のみを取得
         """
+        # swagger_fake_viewの場合は空のクエリセットを返す
+        if getattr(self, 'swagger_fake_view', False):
+            return Notification.objects.none()
+  
         user = self.request.user
         is_read = self.request.query_params.get('is_read') # type: ignore
         
