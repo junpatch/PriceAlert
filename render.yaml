@@ -100,16 +100,15 @@ services:
           name: pricealert-redis
           property: connectionString
 
+  # Redis
+  - type: redis
+    name: pricealert-redis
+    plan: free
+    ipAllowList: []
+
 # データベース
 databases:
   - name: pricealert_db
     plan: free
     databaseName: pricealert
     user: pricealert_user
-
-# Redis
-services:
-  - type: redis
-    name: pricealert-redis
-    plan: free
-    ipAllowList: [] 
