@@ -89,7 +89,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         is_read = self.request.query_params.get('is_read') # type: ignore
         
-        queryset = Notification.objects.filter(user=user)
+        queryset = (
+            Notification.objects.filter(user=user)
+            .select_related('product')
+        )
         
         # 既読・未読フィルター
         if is_read:

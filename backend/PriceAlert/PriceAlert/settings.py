@@ -34,7 +34,10 @@ ENVIRONMENT = os.getenv('DJANGO_ENVIRONMENT', 'development')
 IS_PRODUCTION = ENVIRONMENT == 'production'
 
 # 環境に応じたデバッグ設定
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = True
+
+# SQL実行のログを記録する（一時的な設定）
+DEBUG_QUERY_LOG = True
 
 # フロントエンドURL（環境に応じて変更）
 if IS_PRODUCTION:
@@ -81,6 +84,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     'drf_yasg',
+    "querycount",
     
     # 自作アプリ
     "PriceAlert",  # プロジェクト自体をアプリとして追加
@@ -99,6 +103,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "querycount.middleware.QueryCountMiddleware",
 ]
 
 ROOT_URLCONF = "PriceAlert.urls"
@@ -418,4 +423,17 @@ LOGGING = {
         },
     },
 }
+
+# Configure Django Debug Toolbar
+if DEBUG:
+    INSTALLED_APPS += [
+        'debug_toolbar',
+    ]
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+    INTERNAL_IPS = ['127.0.0.1', 'localhost']
+
+# SQLクエリの出力設定
+if DEBUG and DEBUG_QUERY_LOG:
+    LOGGING['loggers']['django.db.backends']['level'] = 'DEBUG'
+    LOGGING['loggers']['django.db.backends']['handlers'] = ['console']
 

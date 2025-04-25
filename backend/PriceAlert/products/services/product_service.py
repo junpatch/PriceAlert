@@ -1,8 +1,10 @@
 import logging
+import time
+from collections import defaultdict
 
 from typing import Dict, List, Optional, Set, Any, Tuple
 from django.utils import timezone
-from django.db import transaction
+from django.db import transaction, connection
 
 from ..models import Product, ECSite, ProductOnECSite, PriceHistory, UserProduct
 from ..connectors.factory import ECConnectorFactory
@@ -22,6 +24,9 @@ class ProductService:
         """URLまたはJANコードから商品を検索"""
         logger.info('商品検索を開始します - URL: %s..., JANコード: %s', 
                    url[:30] if url else None, jan_code)
+        
+        # クエリカウンタをリセット
+        reset_queries_stats()
         
         try:
             # 処理結果格納用
@@ -56,6 +61,16 @@ class ProductService:
                              url, jan_code)
                 return []
             
+            # クエリをカウント
+            checkpoint_queries_stats("検索前")
+            
+            # キャッシュを用意（コード→オブジェクト）
+            ec_site_cache = {}
+            product_cache = {}
+
+            # クエリをカウント
+            checkpoint_queries_stats("ec_site取得前")
+            
             # 検索結果をDBに保存
             stats = {
                 'new_products': 0,
@@ -65,15 +80,25 @@ class ProductService:
             saved_products: List[Product] = []
             with transaction.atomic():
                 for product_info in all_product_infos:
-                    saved_product, created = sds.save_product(product_info)
-                    stats['new_products'] += 1 if created else 0
-                    saved_products.append(saved_product)
+                    if product_info['jan_code'] not in product_cache:
+                        saved_product, created = sds.save_product(product_info)
+                        stats['new_products'] += 1 if created else 0
+                        saved_products.append(saved_product)
+                        product_cache[product_info['jan_code']] = saved_product
 
-                    saved_product_on_ec_site, created, is_price_changed = sds.save_product_on_ec_site_and_price_history(saved_product, product_info)
+                        saved_user_product, created = sds.save_user_product(saved_product, user_id, price_threshold)
+
+                    # EC Siteキャッシュを渡す
+                    saved_product_on_ec_site, created, is_price_changed = sds.save_product_on_ec_site_and_price_history(
+                        saved_product, product_info, ec_site_cache
+                    )
                     stats['new_ec_sites'] += 1 if created else 0
                     stats['new_price_histories'] += 1 if is_price_changed else 0
 
-                    saved_user_product, created = sds.save_user_product(saved_product, user_id, price_threshold)
+
+            
+            # クエリをカウント
+            checkpoint_queries_stats("DB保存後")
             
             # 集計結果をログ出力
             logger.info(
@@ -82,155 +107,58 @@ class ProductService:
                 f'価格更新: {stats["new_price_histories"]}件',
             )
             
+            # 最終的なクエリ統計の出力
+            dump_queries_stats()
+            
             return saved_products
             
         except Exception as e:
             logger.error('商品検索中にエラーが発生しました - URL: %s, JANコード: %s, エラー: %s', 
                         url, jan_code, str(e), exc_info=True)
             raise
+
+# SQLクエリをモニタリングするための変数とメソッド
+query_stats = defaultdict(int)
+queries_log = []
+query_timestamps = {}
+
+def reset_queries_stats():
+    """クエリ統計をリセット"""
+    global query_stats, queries_log, query_timestamps
+    query_stats.clear()
+    queries_log.clear()
+    query_timestamps.clear()
     
-    # def _save_search_results(self, product_infos: List[Dict[str, Any]], 
-    #                         user_id: int, 
-    #                         price_threshold: Optional[int]) -> List[Product]:
-    #     """検索結果をDBに保存して、製品オブジェクトのリストを返す"""
-    #     products: List[Product] = []
-    #     stats = {
-    #         'new_products': 0,
-    #         'existing_products': 0,
-    #         'new_ec_sites': 0,
-    #         'updated_ec_sites': 0,
-    #         'new_price_histories': 0
-    #     }
-        
-    #     with transaction.atomic():
-    #         for product_info in product_infos:
-    #             # 商品の保存
-    #             jan_code = product_info.get('jan_code') # jan_code: str | None
-    #             model_number = product_info.get('model_number')
-                
-    #             # ProductオブジェクトのID確認（既存の場合はupdate_or_create不要のため）
-    #             existing_product: Optional[Product] = None
-                
-    #             # JANコードで既存商品を探す
-    #             if jan_code:
-    #                 existing_product = Product.objects.filter(jan_code=jan_code).first()
-                
-    #             # 既存商品がある場合は更新、なければ新規作成
-    #             if existing_product:
-    #                 product = existing_product
-    #                 stats['existing_products'] += 1
-    #                 # 商品情報が不足している場合は更新
-    #                 if not product.image_url and product_info.get('image_url'):
-    #                     product.image_url = product_info.get('image_url')
-    #                     product.save(update_fields=['image_url'])
-    #             else:
-    #                 # 新規商品を作成
-    #                 product_data: Dict[str, Any] = {
-    #                     'name': product_info.get('name'),
-    #                     'description': product_info.get('description'),
-    #                     'image_url': product_info.get('image_url'),
-    #                     'manufacturer': product_info.get('manufacturer'),
-    #                     'jan_code': jan_code,
-    #                     'model_number': model_number,
-    #                 }
-                    
-    #                 product = Product.objects.create(**product_data)
-    #                 stats['new_products'] += 1
-                
-    #             # ECサイト情報の保存
-    #             product_on_ec_site, created, is_price_changed = self._save_ec_site_info(product_info, product)
-    #             if created:
-    #                 stats['new_ec_sites'] += 1
-    #             else:
-    #                 stats['updated_ec_sites'] += 1
-
-    #             # 価格履歴の保存
-    #             if is_price_changed:
-    #                 stats['new_price_histories'] += 1
-
-    #             # 結果リストに追加（重複を排除）
-    #             if product not in products:
-    #                 products.append(product)
-                        
-    #             # ユーザーと商品を関連付け
-    #             user_product, created = UserProduct.objects.get_or_create(
-    #                 user_id=user_id,
-    #                 product=product,
-    #                 defaults={
-    #                     'notification_enabled': True,
-    #                     'display_order': 0,
-    #                     'price_threshold': price_threshold
-    #                 }
-    #             )
-        
-    #     # 集計結果をログ出力
-    #     logger.info(
-    #         '商品情報の保存が完了しました - 新規商品: %d件, 既存商品: %d件, '
-    #         '新規ECサイト情報: %d件, 更新ECサイト情報: %d件, 新規価格履歴: %d件',
-    #         stats['new_products'],
-    #         stats['existing_products'],
-    #         stats['new_ec_sites'],
-    #         stats['updated_ec_sites'],
-    #         stats['new_price_histories']
-    #     )
-                
-    #     return products
+def checkpoint_queries_stats(checkpoint_name):
+    """現在のSQLクエリの状態をログに記録"""
+    current_count = len(connection.queries)
+    logger.info(f"[SQL統計] {checkpoint_name}: 現在のSQLクエリ数は {current_count}個です")
     
-    # def _save_ec_site_info(self, product_info: Dict[str, Any], product: Product) -> Tuple[ProductOnECSite, bool, bool]:
-    #     """ECサイト情報を保存する共通メソッド"""
+    # 新しいクエリを記録
+    for idx, query_info in enumerate(connection.queries):
+        if idx >= len(queries_log):
+            query = query_info['sql']
+            query_stats[query] += 1
+            queries_log.append(query)
+            query_timestamps[query] = query_info['time']
 
-    #     # 価格履歴保存するかを先に判断
-    #     try:
-    #         product_on_ec_site = ProductOnECSite.objects.filter(
-    #             product=product,
-    #             ec_site=ECSite.objects.get(code=product_info.get('ec_site')),
-    #             ec_product_id=product_info.get('ec_product_id')
-    #         ).first()
-    #         if  product_on_ec_site and \
-    #             (
-    #                 product_on_ec_site.current_price != product_info.get('price') or \
-    #                 product_on_ec_site.effective_price != product_info.get('effective_price')
-    #             ):
-    #             is_price_changed = True # 価格履歴保存が必要
-    #         else:
-    #             is_price_changed = False
+def dump_queries_stats():
+    """重複クエリを含む詳細なSQLクエリ統計をログに出力"""
+    total_queries = len(queries_log)
+    duplicate_count = sum(count - 1 for count in query_stats.values() if count > 1)
+    duplicate_percent = (duplicate_count / total_queries * 100) if total_queries > 0 else 0
+    
+    logger.info(f"[SQL統計] 合計SQLクエリ数: {total_queries}, 重複クエリ数: {duplicate_count} ({duplicate_percent:.1f}%)")
+    
+    # 重複クエリ数が多い順にソート
+    sorted_queries = sorted(query_stats.items(), key=lambda x: x[1], reverse=True)
+    
+    # 重複クエリのみを表示
+    for query, count in sorted_queries:
+        if count > 1:
+            time_spent = query_timestamps.get(query, 'unknown')
+            logger.info(f"[重複SQL] {count}回実行されたクエリ (実行時間: {time_spent}): {query[:150]}...")
 
-    #     except Exception as e:
-    #         logger.error('前回の価格履歴との比較中にエラーが発生しました。履歴を保存して続行します - 商品: %s, エラー: %s', 
-    #                     product.name, str(e), exc_info=True)
-    #         is_price_changed = True
-
-    #     # ECサイト上の商品情報を保存
-    #     product_on_ec_site, created = ProductOnECSite.objects.update_or_create(
-    #         product=product,
-    #         ec_site=ECSite.objects.get(code=product_info.get('ec_site')),
-    #         ec_product_id=product_info.get('ec_product_id'),
-    #         defaults={
-    #             'seller_name': product_info.get('seller_name'),
-    #             'product_url': product_info.get('product_url'),
-    #             'affiliate_url': product_info.get('affiliate_url'),
-    #             'current_price': product_info.get('price'),
-    #             'current_points': product_info.get('points', 0),
-    #             'shipping_fee': product_info.get('shipping_fee', 0),
-    #             'effective_price': product_info.get('effective_price', product_info.get('price')),
-    #             'condition': product_info.get('condition'),
-    #             'last_updated': timezone.now(),
-    #             'is_active': True
-    #         }
-    #     )
-        
-    #     # 価格履歴を保存
-    #     try:
-    #         if created or is_price_changed:
-    #             price_history = PriceHistory.objects.create(
-    #                 product_on_ec_site=product_on_ec_site,
-    #                 price=product_info.get('price'),
-    #                 points=product_info.get('points', 0),
-    #                 effective_price=product_info.get('effective_price', product_info.get('price')),
-    #                 captured_at=timezone.now()
-    #             )
-                
-    #     except Exception as e:
-    #         logger.error('価格履歴の保存中にエラーが発生しました - 商品: %s..., エラー: %s', 
-    #                     product.name[:20], str(e), exc_info=True)
-    #     return product_on_ec_site, created, is_price_changed
+def print_queries():
+    for query in connection.queries:
+        print(query['sql'])

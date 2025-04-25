@@ -1,4 +1,5 @@
 import logging
+from django.utils import timezone
 
 from rest_framework import status, permissions, serializers, viewsets
 from rest_framework.response import Response
@@ -26,8 +27,12 @@ class ProductViewSet(viewsets.ViewSet):
         """商品一覧を返す GET: products/"""
         logger.info('商品一覧の取得を開始 - ユーザー: %s', request.user.username)
         try:
-            # TODO: ユーザーの商品のみ表示になっているので要修正
-            queryset = Product.objects.filter(userproduct__user=request.user).distinct()
+            # 最適化: prefetch_relatedを追加
+            queryset = (
+                Product.objects.filter(userproduct__user=request.user)
+                .prefetch_related('productonecsite_set', 'productonecsite_set__ec_site')
+                .distinct()
+            )
             serializer = ProductSerializer(queryset, many=True)
             logger.debug('商品一覧を取得しました - 件数: %d', len(serializer.data))
             return Response(serializer.data)
@@ -42,8 +47,12 @@ class ProductViewSet(viewsets.ViewSet):
         """特定の商品の詳細を返す GET: products/{pk}/"""
         logger.info('商品詳細の取得を開始 - 商品ID: %s, ユーザー: %s', pk, request.user.username)
         try:
-            # TODO: ユーザーの商品のみ表示になっているので要修正
-            product = get_object_or_404(Product, pk=pk, userproduct__user=request.user)
+            # 最適化: prefetch_relatedを追加
+            product = get_object_or_404(
+                Product.objects.prefetch_related('productonecsite_set', 'productonecsite_set__ec_site'), 
+                pk=pk, 
+                userproduct__user=request.user
+            )
             serializer = ProductSerializer(product)
             logger.debug('商品詳細を取得しました - 商品: %s', product.name)
             return Response(serializer.data)
@@ -63,11 +72,17 @@ class ProductViewSet(viewsets.ViewSet):
         pk = kwargs['pk']
         logger.info('ユーザー商品の価格履歴の取得を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
+            # 関連オブジェクトを事前に取得して無駄なクエリを減らす
             price_history = PriceHistory.objects.filter(
                 product_on_ec_site__product__id=pk
+            ).select_related(
+                'product_on_ec_site',
+                'product_on_ec_site__product',
+                'product_on_ec_site__ec_site'
             )
             serializer = PriceHistorySerializer(price_history, many=True)
-            logger.debug('ユーザー商品の価格履歴を取得しました - 商品: %s', price_history[0].product_on_ec_site.product.name)
+            if price_history:
+                logger.debug('ユーザー商品の価格履歴を取得しました - 商品: %s', price_history[0].product_on_ec_site.product.name)
             return Response(serializer.data)
         except Exception as e:
             logger.error('ユーザー商品の価格履歴の取得中にエラーが発生しました - ID: %s, ユーザー: %s, エラー: %s', 
@@ -95,7 +110,11 @@ class UserProductViewSet(viewsets.ViewSet):
         """ログインユーザーの商品のみ表示"""
         logger.info('ユーザー商品一覧の取得を開始 - ユーザー: %s', request.user.username)
         try:
-            queryset = UserProduct.objects.filter(user=request.user).select_related('product')
+            queryset =(
+                UserProduct.objects.filter(user=request.user)
+                .select_related('product')
+                .prefetch_related('product__productonecsite_set', 'product__productonecsite_set__ec_site')
+            )
             serializer = UserProductSerializer(queryset, many=True)
             logger.debug('ユーザー商品一覧を取得しました - 件数: %d', len(serializer.data))
             return Response(serializer.data)
@@ -111,7 +130,12 @@ class UserProductViewSet(viewsets.ViewSet):
         pk = kwargs['pk']
         logger.info('ユーザー商品詳細の取得を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
-            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            # 関連オブジェクトを一度に取得してN+1問題を解消
+            user_product = get_object_or_404(
+                UserProduct.objects.select_related('product')
+                .prefetch_related('product__productonecsite_set', 'product__productonecsite_set__ec_site'),
+                pk=pk, user=request.user
+            )
             serializer = UserProductSerializer(user_product)
             logger.debug('ユーザー商品詳細を取得しました - 商品: %s', user_product.product.name)
             return Response(serializer.data)
@@ -150,6 +174,14 @@ class UserProductViewSet(viewsets.ViewSet):
                 price_threshold=price_threshold
             )
             
+            # 重要: 結果のIDを取得して、prefetch_relatedを適用したquerysetを取得
+            if products:
+                product_ids = [p.pk for p in products]
+                products = Product.objects.filter(id__in=product_ids).prefetch_related(
+                    'productonecsite_set', 
+                    'productonecsite_set__ec_site'
+                ).order_by('id')  # 元の順序を保持するためにidでソート
+            
             # 検索結果をシリアライズして返却
             serializer = ProductSerializer(products, many=True)
             if len(serializer.data) == 0:
@@ -179,7 +211,12 @@ class UserProductViewSet(viewsets.ViewSet):
         pk = kwargs['pk']
         logger.info('ユーザー商品の更新を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
-            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            # 関連オブジェクトを一度に取得してN+1問題を解消
+            user_product = get_object_or_404(
+                UserProduct.objects.select_related('product', 'user')
+                .prefetch_related('product__productonecsite_set', 'product__productonecsite_set__ec_site'),
+                pk=pk, user=request.user
+            )
             serializer = self._update_user_product(user_product, request.data, partial=False)
             logger.info('ユーザー商品を更新しました - 商品: %s..., ユーザー: %s', 
                        user_product.product.name[:20], request.user.username)
@@ -200,7 +237,12 @@ class UserProductViewSet(viewsets.ViewSet):
         pk = kwargs['pk']
         logger.info('ユーザー商品の部分更新を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
-            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            # 関連オブジェクトを一度に取得してN+1問題を解消
+            user_product = get_object_or_404(
+                UserProduct.objects.select_related('product', 'user')
+                .prefetch_related('product__productonecsite_set', 'product__productonecsite_set__ec_site'),
+                pk=pk, user=request.user
+            )
             serializer = self._update_user_product(user_product, request.data, partial=True)
             logger.info('ユーザー商品を部分更新しました - 商品: %s..., ユーザー: %s', 
                        user_product.product.name[:20], request.user.username)
@@ -222,7 +264,10 @@ class UserProductViewSet(viewsets.ViewSet):
         logger.info('ユーザー商品の削除を開始 - ID: %s, ユーザー: %s', pk, request.user.username)
         try:
             # このユーザーに紐づく商品かを確認
-            user_product = get_object_or_404(UserProduct, pk=pk, user=request.user)
+            user_product = get_object_or_404(
+                UserProduct.objects.select_related('product'), 
+                pk=pk, user=request.user
+            )
             product_name = user_product.product.name
             
             # Product自体は削除しない。次回同一商品追加時に価格履歴が残るようにしておく。
@@ -289,7 +334,7 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
             
         logger.debug('ECサイト商品情報の取得を開始 - ユーザー: %s', self.request.user.username) # type: ignore
         user_products = UserProduct.objects.filter(user=self.request.user).values_list('product_id', flat=True)
-        return ProductOnECSite.objects.filter(product_id__in=user_products)
+        return ProductOnECSite.objects.filter(product_id__in=user_products).select_related('ec_site', 'product')
     
     # POST: product-on-ec/
     def perform_create(self, serializer):
@@ -300,7 +345,19 @@ class ProductOnECSiteViewSet(viewsets.ModelViewSet):
         try:
             # ユーザーが登録している商品か確認
             UserProduct.objects.get(user=self.request.user, product_id=product_id)
-            serializer.save()
+            
+            # ECサイト情報を保存
+            product_on_ec_site = serializer.save()
+            
+            # 価格履歴も作成
+            PriceHistory.objects.create(
+                product_on_ec_site=product_on_ec_site,
+                price=product_on_ec_site.current_price,
+                points=product_on_ec_site.current_points or 0,
+                effective_price=product_on_ec_site.effective_price,
+                captured_at=timezone.now()
+            )
+            
             logger.info('ECサイト商品情報を作成しました - 商品ID: %s, ユーザー: %s', 
                        product_id, self.request.user.username) # type: ignore
         except UserProduct.DoesNotExist:

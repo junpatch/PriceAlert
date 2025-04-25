@@ -49,3 +49,11 @@ urlpatterns = [
     path('api/v1/', include('products.urls')),
     path('api/v1/notifications/', include('notifications.urls')),
 ]
+
+# Debug Toolbar
+if settings.DEBUG:
+    try:
+        import debug_toolbar
+        urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
+    except ImportError:
+        pass
