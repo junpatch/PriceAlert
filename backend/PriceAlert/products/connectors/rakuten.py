@@ -4,6 +4,7 @@ import requests
 import re
 import logging
 from typing import List, Dict, Any, Optional, Union, Tuple, cast, Set
+from rest_framework.exceptions import NotFound, APIException
 
 logger = logging.getLogger(__name__)
 
@@ -25,20 +26,14 @@ class RakutenConnector(ECConnector):
             # URLから商品コードと店舗コードを抽出
             shop_code, item_code = self._extract_item_code_and_shop_code(url)
             if not shop_code or not item_code:
-                logger.warning('楽天: URLから商品コードが見つかりませんでした - URL: %s', url)
-                return set()
+                raise NotFound('楽天: URLから商品コードが抽出できませんでした - URL: %s', url)
 
             # 商品コードと店舗コードで検索
-            response = self._search_item(keyword=f"{item_code} {shop_code}")
+            response = self._search_item(keyword=item_code, shopCode=shop_code)
             
-            # 検索結果がない場合
             if not response or response.get("count", 0) == 0:
-                # 商品コードのみで検索
-                response = self._search_item(keyword=f"{item_code}")
-                if not response or response.get("count", 0) == 0:
-                    # それでもない場合は商品が見つからない
-                    logger.warning('楽天: URLから商品が見つかりませんでした - URL: %s', url)
-                    return set()
+                # 商品が見つからない
+                raise NotFound('楽天: URLから商品が見つかりませんでした - URL: %s', url)
             
             all_jan_codes: Set[str] = set()
             for item_info in response.get("Items", []):
@@ -47,7 +42,10 @@ class RakutenConnector(ECConnector):
             logger.info(f'楽天: {len(all_jan_codes)}件のJANコードが見つかりました: {all_jan_codes}')
 
             return all_jan_codes
-            
+        
+        except (NotFound, RakutenAPIException) as e:
+            logger.warning(str(e))
+            return set()
         except Exception as e:
             logger.error('楽天: URL検索中に予期せぬエラーが発生しました - URL: %s, エラー: %s', 
                         url, str(e), exc_info=True)
@@ -63,8 +61,7 @@ class RakutenConnector(ECConnector):
             
             # 検索結果から商品情報を取得
             if not response or response.get("count", 0) == 0:
-                # アイテムが見つからない：検索を続行させるためエラーハンドリングしない
-                return []
+                raise NotFound('楽天: JANコードから商品が見つかりませんでした - JANコード: %s', jan_code)
             
             result: List[ProductData] = []
             for item_info in response.get("Items", []):
@@ -72,7 +69,10 @@ class RakutenConnector(ECConnector):
                 result.append(product_data)
             
             return result
-            
+        
+        except (NotFound, RakutenAPIException) as e:
+            logger.warning(str(e))
+            return []
         except Exception as e:
             logger.error('楽天: JANコード検索中に予期せぬエラーが発生しました - JANコード: %s, エラー: %s', 
                         jan_code, str(e), exc_info=True)
@@ -85,20 +85,20 @@ class RakutenConnector(ECConnector):
             # "affiliateId": self.affiliate_id,
             "format": "json",
             "format_version": "2",
+            "hits": 10,
+            "sort": "+itemPrice",
         }
         params.update(kwargs)
         
         response = requests.get(self.request_url, params=params)
         if response.status_code != 200:
-            logger.error('楽天API呼び出しエラー - ステータスコード: %d, レスポンス: %s', 
-                        response.status_code, response.text)
-            return {}
+            raise RakutenAPIException(f'楽天APIからエラー応答を受け取りました: {response.status_code}')
         
         return cast(Dict[str, Any], response.json())
     
     def fetch_price(self, url: str) -> Optional[ProductData]:
         """商品URLから価格情報のみ取得する"""
-        # 未実装のため、URLから商品検索して最初の結果を返す
+        # 未実装
         return None
 
     def _extract_item_code_and_shop_code(self, url: str) -> Tuple[Optional[str], Optional[str]]:
@@ -140,3 +140,8 @@ class RakutenConnector(ECConnector):
             # 'affiliate_url': self._get_nested_attr(item_info, 'affiliateUrl', ""),
             ec_site='rakuten'
         )
+    
+class RakutenAPIException(APIException):
+    status_code = 502  # Bad Gateway
+    default_detail = '楽天APIとの通信に失敗しました。'
+    default_code = 'rakuten_api_error'

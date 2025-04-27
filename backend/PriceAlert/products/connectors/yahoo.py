@@ -94,6 +94,8 @@ class YahooConnector(ECConnector):
             "appid": self.api_key,
             # "affiliateId": self.affiliate_id,
             "user_rank": self.user_rank,
+            "results": 10,
+            "sort": "+price",
         }
         params.update(kwargs)
         
