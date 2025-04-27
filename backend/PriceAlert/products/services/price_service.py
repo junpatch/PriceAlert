@@ -45,16 +45,21 @@ class PriceService:
                              jan_code, str(e))
                 continue
             
+            products_with_info = [(product, found_product) for found_product in found_products]
+            ec_site_cache = {}
+            with transaction.atomic():
+                results = sds.save_product_on_ec_site_and_price_history_batch(products_with_info, ec_site_cache)
+            
+
+            # 統計情報の更新
             stats = {
                 'new_ec_sites': 0,
                 'new_price_histories': 0
             }
-            with transaction.atomic():
-                for found_product in found_products:
-                    saved_product_on_ec_site, created, is_price_changed = sds.save_product_on_ec_site_and_price_history(product, found_product)
-                    stats['new_ec_sites'] += 1 if created else 0
-                    stats['new_price_histories'] += 1 if is_price_changed else 0
-            
+            for _, created, is_price_changed in results:
+                stats['new_ec_sites'] += 1 if created else 0
+                stats['new_price_histories'] += 1 if is_price_changed else 0
+
             logger.info(
                 f'DBへの保存が完了しました - JANコード: {jan_code} - 新規ECサイト: {stats["new_ec_sites"]}件, '
                 f'価格更新: {stats["new_price_histories"]}件',

@@ -2,11 +2,10 @@ import logging
 import time
 from collections import defaultdict
 
-from typing import Dict, List, Optional, Set, Any, Tuple
-from django.utils import timezone
+from typing import Dict, List, Optional, Set, Any
 from django.db import transaction, connection
 
-from ..models import Product, ECSite, ProductOnECSite, PriceHistory, UserProduct
+from ..models import Product
 from ..connectors.factory import ECConnectorFactory
 from .save_to_db_service import SaveToDBService as sds
 
@@ -24,10 +23,7 @@ class ProductService:
         """URLまたはJANコードから商品を検索"""
         logger.info('商品検索を開始します - URL: %s..., JANコード: %s', 
                    url[:30] if url else None, jan_code)
-        
-        # クエリカウンタをリセット
-        reset_queries_stats()
-        
+
         try:
             # 処理結果格納用
             all_product_infos: List[Dict[str, Any]] = []
@@ -60,17 +56,11 @@ class ProductService:
                 logger.warning('検索結果が見つかりませんでした - URL: %s, JANコード: %s', 
                              url, jan_code)
                 return []
-            
-            # クエリをカウント
-            checkpoint_queries_stats("検索前")
-            
+
             # キャッシュを用意（コード→オブジェクト）
             ec_site_cache = {}
             product_cache = {}
 
-            # クエリをカウント
-            checkpoint_queries_stats("ec_site取得前")
-            
             # 検索結果をDBに保存
             stats = {
                 'new_products': 0,
@@ -79,37 +69,38 @@ class ProductService:
             }
             saved_products: List[Product] = []
             with transaction.atomic():
+                # 商品情報を一括保存
+                products_with_info = []
                 for product_info in all_product_infos:
-                    if product_info['jan_code'] not in product_cache:
-                        saved_product, created = sds.save_product(product_info)
-                        stats['new_products'] += 1 if created else 0
-                        saved_products.append(saved_product)
-                        product_cache[product_info['jan_code']] = saved_product
+                    if 'jan_code' in product_info and product_info['jan_code']:
+                        if product_info['jan_code'] not in product_cache:
+                            saved_product, created = sds.save_product(product_info)
+                            stats['new_products'] += 1 if created else 0
+                            saved_products.append(saved_product)
+                            product_cache[product_info['jan_code']] = saved_product
 
-                        saved_user_product, created = sds.save_user_product(saved_product, user_id, price_threshold)
+                            saved_user_product, created = sds.save_user_product(saved_product, user_id, price_threshold)
+                        else:
+                            saved_product = product_cache[product_info['jan_code']]
+                        
+                        products_with_info.append((saved_product, product_info))
+                
+                # 一括で処理を実行
+                if products_with_info:
+                    results = sds.save_product_on_ec_site_and_price_history_batch(products_with_info, ec_site_cache)
+                    
+                    # 統計情報の更新
+                    for _, created, is_price_changed in results:
+                        stats['new_ec_sites'] += 1 if created else 0
+                        stats['new_price_histories'] += 1 if is_price_changed else 0
 
-                    # EC Siteキャッシュを渡す
-                    saved_product_on_ec_site, created, is_price_changed = sds.save_product_on_ec_site_and_price_history(
-                        saved_product, product_info, ec_site_cache
-                    )
-                    stats['new_ec_sites'] += 1 if created else 0
-                    stats['new_price_histories'] += 1 if is_price_changed else 0
-
-
-            
-            # クエリをカウント
-            checkpoint_queries_stats("DB保存後")
-            
             # 集計結果をログ出力
             logger.info(
                 f'商品情報の保存が完了しました - 新規商品: {stats["new_products"]}件, '
                 f'新規ECサイト: {stats["new_ec_sites"]}件, '
                 f'価格更新: {stats["new_price_histories"]}件',
             )
-            
-            # 最終的なクエリ統計の出力
-            dump_queries_stats()
-            
+
             return saved_products
             
         except Exception as e:
@@ -131,9 +122,7 @@ def reset_queries_stats():
     
 def checkpoint_queries_stats(checkpoint_name):
     """現在のSQLクエリの状態をログに記録"""
-    current_count = len(connection.queries)
-    logger.info(f"[SQL統計] {checkpoint_name}: 現在のSQLクエリ数は {current_count}個です")
-    
+    current_count = len(connection.queries)   
     # 新しいクエリを記録
     for idx, query_info in enumerate(connection.queries):
         if idx >= len(queries_log):

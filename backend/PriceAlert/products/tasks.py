@@ -37,3 +37,9 @@ def fetch_and_store_prices(self):
         logger.error(f"商品価格取得タスクでエラーが発生しました: {str(e)}", exc_info=True)
         # Celeryのリトライ機能を使用
         raise self.retry(exc=e)
+
+def main():
+    fetch_and_store_prices.delay() # type: ignore
+
+if __name__ == "__main__":
+    main()

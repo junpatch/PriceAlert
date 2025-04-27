@@ -64,9 +64,38 @@ class UserProductSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
     def get_product(self, obj):
+        ec_sites = []
+        for poe in obj.product.productonecsite_set.all():
+            ec_site_data = {
+                'id': poe.id,
+                'current_price': poe.current_price,
+                'effective_price': poe.effective_price,
+                'product_url': poe.product_url,
+                'affiliate_url': poe.affiliate_url,
+                'seller_name': poe.seller_name,
+                'shipping_fee': poe.shipping_fee,
+                'condition': poe.condition,
+                'last_updated': poe.last_updated,
+                'is_active': poe.is_active,
+                'created_at': poe.created_at,
+                'updated_at': poe.updated_at,
+                'ec_site': {
+                    'id': poe.ec_site.id,
+                    'name': poe.ec_site.name,
+                    'code': poe.ec_site.code,
+                }
+            }
+            ec_sites.append(ec_site_data)
+            
         return {
             'id': obj.product.id,
             'name': obj.product.name,
+            'description': obj.product.description,
+            'image_url': obj.product.image_url, 
+            'manufacturer': obj.product.manufacturer,
+            'model_number': obj.product.model_number, 
+            'jan_code': obj.product.jan_code, 
+            'ec_sites': ec_sites
         }
 
 class PriceHistorySerializer(serializers.ModelSerializer):
