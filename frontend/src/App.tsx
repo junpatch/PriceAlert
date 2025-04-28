@@ -28,6 +28,7 @@ import { AuthProvider } from "@contexts/AuthContext";
 import { api } from "@services/api";
 import { resetNotifications } from "@features/notifications/slices/notificationsSlice";
 import { clearAllCache } from "@store/slices/cacheSlice";
+import { resetProducts } from "@features/products/slices/productsSlice";
 
 // テーマ設定
 const theme = createTheme({
@@ -150,6 +151,7 @@ const ProtectedRoute: React.FC = () => {
       // ユーザー切り替え検出時、APIキャッシュをリセット
       dispatch(api.util.resetApiState());
       dispatch(resetNotifications());
+      dispatch(resetProducts());
       dispatch(clearAllCache());
     }
 

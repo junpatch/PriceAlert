@@ -13,38 +13,14 @@ import {
   setError,
   setTotalCount,
   setUnreadCount,
-  resetNotifications
 } from '../slices/notificationsSlice';
 
 export const useNotifications = () => {
   const { notifications, unreadCount, loading, error, totalCount } = useAppSelector(state => state.notifications);
-  const { isAuthenticated, user } = useAppSelector(state => state.auth);
+  const { isAuthenticated } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
   const [currentPage, setCurrentPage] = useState(1);
   const [unreadFilter, setUnreadFilter] = useState(false);
-  const [prevUserId, setPrevUserId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (user && prevUserId !== null && user.id !== prevUserId) {
-      console.log('通知フックでユーザー切り替えを検出: 状態をリセットします');
-      dispatch(resetNotifications());
-      setCurrentPage(1);
-      setUnreadFilter(false);
-    }
-    
-    if (user) {
-      setPrevUserId(user.id);
-    }
-  }, [user, prevUserId, dispatch]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      console.log('ログアウト状態を検出: 通知状態をリセットします');
-      dispatch(resetNotifications());
-      setCurrentPage(1);
-      setUnreadFilter(false);
-    }
-  }, [isAuthenticated, dispatch]);
 
   const { 
     data: notificationsData, 

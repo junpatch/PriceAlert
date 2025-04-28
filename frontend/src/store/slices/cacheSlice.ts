@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { CacheConfig, CacheState } from '@/types';
-
+import { logout } from '@/features/auth/slices/authSlice';
 const initialState: CacheState = {};
 
 const cacheSlice = createSlice({
@@ -16,6 +16,9 @@ const cacheSlice = createSlice({
     clearAllCache: () => {
       return {};
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logout, () => initialState);
   },
 });
 

@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ProductsState, UserProduct, Product, PriceHistory } from '@/types';
-
+import { logout } from '@/features/auth/slices/authSlice';
 const initialState: ProductsState = {
   productList: [],
   selectedProduct: null,
@@ -41,6 +41,10 @@ const productsSlice = createSlice({
     removeProduct: (state, action: PayloadAction<number>) => {
       state.productList = state.productList.filter(product => product.id !== action.payload);
     },
+    resetProducts: () => initialState
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logout, () => initialState);
   },
 });
 
@@ -53,6 +57,7 @@ export const {
   addProduct,
   updateProduct,
   removeProduct,
+  resetProducts,
 } = productsSlice.actions;
 
 export default productsSlice.reducer; 
