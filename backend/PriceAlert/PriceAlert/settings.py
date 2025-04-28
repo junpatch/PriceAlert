@@ -84,7 +84,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     'drf_yasg',
-    "querycount",
+    # "querycount",
     
     # 自作アプリ
     "PriceAlert",  # プロジェクト自体をアプリとして追加
@@ -103,7 +103,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "querycount.middleware.QueryCountMiddleware",
+    # "querycount.middleware.QueryCountMiddleware",
 ]
 
 ROOT_URLCONF = "PriceAlert.urls"
@@ -339,28 +339,10 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'colored',
         },
-        'file_debug': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': str(LOG_DIR / 'debug.log'),
-            'when': 'midnight',
-            'backupCount': 7,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-        },
-        'file_info': {
+        'logfile': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': str(LOG_DIR / 'info.log'),
-            'when': 'midnight',
-            'backupCount': 14,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-        },
-        'file_error': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': str(LOG_DIR / 'error.log'),
+            'filename': str(LOG_DIR / 'logfile.log'),
             'when': 'midnight',
             'backupCount': 30,
             'formatter': 'verbose',
@@ -374,52 +356,49 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_info', 'file_error'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'django.server': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_info'],
+            'handlers': ['console', 'logfile'],
             'level': 'INFO',
             'propagate': False,
         },
+        'django.server': {
+            'handlers': ['console', 'logfile'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
         'django.db.backends': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_debug'] if DEBUG else ['file_debug'],
+            'handlers': ['console', 'logfile'],
             'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'django.security': {
-            'handlers': [],
-            # 'handlers': ['file_error', 'mail_admins'],
+            'handlers': ['console', 'logfile', 'mail_admins'],
             'level': 'ERROR',
             'propagate': False,
         },
         'products': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console', 'logfile'],
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'accounts': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console', 'logfile'],
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'users': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console', 'logfile'],
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'notifications': {
-            'handlers': ['console'],
-            # 'handlers': ['console', 'file_debug', 'file_info', 'file_error'],
+            'handlers': ['console', 'logfile'],
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': True,
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console', 'logfile', 'mail_admins'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
         },
     },
 }

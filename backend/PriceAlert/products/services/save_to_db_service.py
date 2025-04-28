@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from django.db import transaction
 from ..models import ECSite, ProductOnECSite, PriceHistory, Product, UserProduct
 
-logger = logging.getLogger('products')
+logger = logging.getLogger(__name__)
 
 class SaveToDBService:
     """DBに保存するためのサービス"""

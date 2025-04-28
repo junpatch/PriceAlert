@@ -14,7 +14,7 @@ from .tasks import fetch_and_store_prices
 from notifications.tasks import check_price_alerts, send_price_alert_notifications
 
 
-logger = logging.getLogger('products.views')
+logger = logging.getLogger(__name__)
 
 class ProductViewSet(viewsets.ViewSet):
     """

@@ -5,7 +5,7 @@ from collections import Counter
 from ..models import ECSite
 from .base import ECConnector, ProductData
 
-logger = logging.getLogger('products')
+logger = logging.getLogger(__name__)
 
 class ECConnectorFactory:
     """ECサイトコネクタのファクトリークラス"""

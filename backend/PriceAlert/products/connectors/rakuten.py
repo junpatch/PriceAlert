@@ -3,7 +3,7 @@ from django.conf import settings
 import requests
 import re
 import logging
-from typing import List, Dict, Any, Optional, Union, Tuple, cast, Set
+from typing import List, Dict, Any, Optional, Tuple, cast, Set
 from rest_framework.exceptions import NotFound, APIException
 
 logger = logging.getLogger(__name__)
@@ -20,20 +20,20 @@ class RakutenConnector(ECConnector):
 
     def search_by_url(self, url: str) -> Set[str]:
         """URLから商品を検索する"""
-        logger.debug('楽天: URL検索を開始 - URL: %s', url)
+        logger.debug(f'楽天: URL検索を開始 - URL: {url}')
         
         try:
             # URLから商品コードと店舗コードを抽出
             shop_code, item_code = self._extract_item_code_and_shop_code(url)
             if not shop_code or not item_code:
-                raise NotFound('楽天: URLから商品コードが抽出できませんでした - URL: %s', url)
+                raise NotFound(f'楽天: URLから商品コードが抽出できませんでした - URL: {url}')
 
             # 商品コードと店舗コードで検索
             response = self._search_item(keyword=item_code, shopCode=shop_code)
             
             if not response or response.get("count", 0) == 0:
                 # 商品が見つからない
-                raise NotFound('楽天: URLから商品が見つかりませんでした - URL: %s', url)
+                raise NotFound(f'楽天: URLから商品が見つかりませんでした - URL: {url}')
             
             all_jan_codes: Set[str] = set()
             for item_info in response.get("Items", []):
@@ -43,17 +43,19 @@ class RakutenConnector(ECConnector):
 
             return all_jan_codes
         
-        except (NotFound, RakutenAPIException) as e:
+        except NotFound as e:
+            logger.info(str(e))
+            return set()
+        except RakutenAPIException as e:
             logger.warning(str(e))
             return set()
         except Exception as e:
-            logger.error('楽天: URL検索中に予期せぬエラーが発生しました - URL: %s, エラー: %s', 
-                        url, str(e), exc_info=True)
+            logger.error(f'楽天: URL検索中に予期せぬエラーが発生しました - URL: {url}, エラー: {str(e)}', exc_info=True)
             return set()
     
     def search_by_jan_code(self, jan_code: str) -> List[ProductData]:
         """JANコードから商品を検索する"""
-        logger.debug('楽天: JANコード検索を開始 - JANコード: %s', jan_code)
+        logger.debug(f'楽天: JANコード検索を開始 - JANコード: {jan_code}')
         
         try:
             # JANコードで検索
@@ -61,7 +63,7 @@ class RakutenConnector(ECConnector):
             
             # 検索結果から商品情報を取得
             if not response or response.get("count", 0) == 0:
-                raise NotFound('楽天: JANコードから商品が見つかりませんでした - JANコード: %s', jan_code)
+                raise NotFound(f'楽天: JANコードから商品が見つかりませんでした - JANコード: {jan_code}')
             
             result: List[ProductData] = []
             for item_info in response.get("Items", []):
@@ -70,12 +72,14 @@ class RakutenConnector(ECConnector):
             
             return result
         
-        except (NotFound, RakutenAPIException) as e:
+        except NotFound as e:
+            logger.info(str(e))
+            return []
+        except RakutenAPIException as e:
             logger.warning(str(e))
             return []
         except Exception as e:
-            logger.error('楽天: JANコード検索中に予期せぬエラーが発生しました - JANコード: %s, エラー: %s', 
-                        jan_code, str(e), exc_info=True)
+            logger.error(f'楽天: JANコード検索中に予期せぬエラーが発生しました - JANコード: {jan_code}, エラー: {str(e)}', exc_info=True)
             return []
     
     def _search_item(self, **kwargs: Any) -> Dict[str, Any]:
